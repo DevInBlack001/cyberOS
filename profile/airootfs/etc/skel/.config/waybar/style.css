@@ -1,47 +1,70 @@
-/* Cyber Department theme */
-@define-color bg      #0B1610;
-@define-color brand   #004C23;
-@define-color surface #12241A;
+/* CyberOS — floating pill bar, UMaT palette */
+@define-color pill    rgba(11, 22, 16, 0.82);
+@define-color edge    rgba(255, 255, 255, 0.10);
 @define-color fg      #ECF1EE;
-@define-color accent  #FFCB06;
-@define-color accent2 #3DBB6E;
-@define-color alert   #C41118;
 @define-color muted   #7A8F82;
+@define-color brand   #004C23;
+@define-color gold    #FFCB06;
+@define-color green   #3DBB6E;
+@define-color blue    #6A91A9;
+@define-color orange  #FF9F43;
+@define-color red     #C41118;
 
 * {
     font-family: "JetBrainsMono Nerd Font", monospace;
     font-size: 13px;
+    font-weight: 600;
     min-height: 0;
+    border: none;
+    box-shadow: none;
+    text-shadow: none;
 }
 
 window#waybar {
-    background: alpha(@brand, 0.90);
+    background: transparent;
     color: @fg;
-    border-bottom: 2px solid @accent;
-    
 }
 
+/* every module is a pill */
+#custom-launcher, #temperature, #custom-install, #clock, #workspaces,
+#tray, #pulseaudio, #network, #battery, #custom-power {
+    background: @pill;
+    border: 1px solid @edge;
+    border-radius: 999px;
+    padding: 0 12px;
+    margin: 0 4px;
+    color: @fg;
+}
+
+#custom-launcher { color: @gold; font-size: 16px; padding: 0 12px; }
+#temperature     { color: @orange; }
+#temperature.critical { color: @red; }
+#custom-install  { background: @gold; color: @brand; border-color: @gold; }
+#clock           { color: @fg; }
+
+#workspaces { padding: 0 6px; }
 #workspaces button {
-    padding: 0 6px;
+    padding: 0 4px;
+    margin: 3px 1px;
     color: @muted;
     background: transparent;
-    border: none;
-    border-radius: 0;
+    border-radius: 999px;
+    min-width: 22px;
 }
-#workspaces button.active { color: @accent; }
-#workspaces button.urgent { color: @alert; }
-#workspaces button:hover  { color: @accent2; background: @surface; }
-
-#window { color: @accent2; padding: 0 10px; }
-
-#clock, #cpu, #memory, #network, #bluetooth, #pulseaudio, #battery, #tray {
-    padding: 0 10px;
-    margin: 4px 0;
-    background: @surface;
-    border-radius: 6px;
+#workspaces button.active {
+    color: @brand;
+    background: @gold;
+    padding: 0 12px;
 }
-#clock { color: @accent; font-weight: bold; }
-#custom-install { background: @accent; color: @brand; font-weight: bold; padding: 0 10px; margin: 4px 0; border-radius: 6px; }
-#battery.warning  { color: #FFB600; }
-#battery.critical { color: @alert; }
-#network.disconnected { color: @alert; }
+#workspaces button.urgent { color: @red; }
+#workspaces button:hover  { color: @gold; }
+
+#pulseaudio  { color: @orange; }
+#pulseaudio.muted { color: @muted; }
+#network     { color: #C08CFF; }
+#network.disconnected { color: @red; }
+#battery     { color: @green; }
+#battery.warning  { color: @orange; }
+#battery.critical { color: @red; }
+#custom-power { color: @fg; padding: 0 10px; }
+#tray > .passive { -gtk-icon-effect: dim; }

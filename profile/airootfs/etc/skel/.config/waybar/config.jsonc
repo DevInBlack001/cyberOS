@@ -1,55 +1,69 @@
 {
     "layer": "top",
     "position": "top",
-    "height": 32,
-    "spacing": 6,
-    "modules-left": ["hyprland/workspaces", "hyprland/window"],
-    "modules-center": ["clock"],
-    "modules-right": ["custom/install", "tray", "cpu", "memory", "network", "bluetooth", "pulseaudio", "battery"],
+    "height": 34,
+    "margin-top": 6,
+    "margin-left": 10,
+    "margin-right": 10,
+    "spacing": 0,
+    "modules-left":   ["custom/launcher", "temperature", "custom/install"],
+    "modules-center": ["clock", "hyprland/workspaces"],
+    "modules-right":  ["tray", "pulseaudio", "network", "battery", "custom/power"],
 
+    "custom/launcher": {
+        "format": "󰣇",
+        "on-click": "rofi -show drun",
+        "tooltip": false
+    },
+    "temperature": {
+        "format": " {temperatureC}°C",
+        "critical-threshold": 85,
+        "format-critical": " {temperatureC}°C",
+        "interval": 5
+    },
+    "custom/install": {
+        "exec": "test -d /run/archiso && echo '  Install CyberOS' || true",
+        "interval": "once",
+        "on-click": "gtk-launch cyberos-install",
+        "tooltip": false
+    },
+    "clock": {
+        "format": "{:%I:%M %p}",
+        "tooltip-format": "<tt><small>{calendar}</small></tt>"
+    },
     "hyprland/workspaces": {
         "format": "{icon}",
         "on-click": "activate",
-        "format-icons": { "default": "", "active": "", "urgent": "" },
+        "format-icons": { "1": "󰆍", "2": "󰈹", "3": "󰨞", "4": "󰉋", "5": "󰙯", "default": "", "active": "" },
         "persistent-workspaces": { "*": 5 }
     },
-    "hyprland/window": { "max-length": 60, "separate-outputs": true },
-    "clock": {
-        "format": "  {:%a %d %b   %H:%M}",
-        "tooltip-format": "<tt><small>{calendar}</small></tt>"
-    },
-    "cpu": { "format": "  {usage}%", "interval": 3 },
-    "memory": { "format": "  {percentage}%", "interval": 5 },
-    "network": {
-        "format-wifi": "  {essid}",
-        "format-ethernet": "󰈀  {ipaddr}",
-        "format-disconnected": "󰖪  offline",
-        "tooltip-format": "{ifname}: {ipaddr}/{cidr}  gw {gwaddr}",
-        "on-click": "nm-connection-editor"
-    },
-    "bluetooth": {
-        "format": "",
-        "format-connected": " {num_connections}",
-        "format-disabled": "",
-        "on-click": "blueman-manager"
-    },
+    "tray": { "spacing": 8 },
     "pulseaudio": {
         "format": "{icon} {volume}%",
-        "format-muted": "  muted",
+        "format-muted": " 0%",
         "format-icons": { "default": ["", "", ""] },
-        "on-click": "pavucontrol"
+        "on-click": "pavucontrol",
+        "on-click-right": "pamixer -t",
+        "tooltip": false
+    },
+    "network": {
+        "format-wifi": " {essid}",
+        "format-ethernet": "󰈀 {ipaddr}",
+        "format-disconnected": "󰖪 offline",
+        "tooltip-format": "{ifname}: {ipaddr}/{cidr}  gw {gwaddr}",
+        "on-click": "nm-connection-editor"
     },
     "battery": {
         "states": { "warning": 25, "critical": 10 },
         "format": "{icon} {capacity}%",
         "format-charging": "󰂄 {capacity}%",
-        "format-icons": ["", "", "", "", ""]
+        "format-plugged": "󰚥 {capacity}%",
+        "format-icons": ["", "", "", "", ""],
+        "tooltip": false
     },
-    "tray": { "spacing": 8 },
-    "custom/install": {
-        "exec": "test -d /run/archiso && echo '  Install CyberOS' || true",
-        "interval": "once",
-        "on-click": "gtk-launch cyberos-install",
+    "custom/power": {
+        "format": "",
+        "on-click": "~/.config/rofi/powermenu.sh",
         "tooltip": false
     }
 }
