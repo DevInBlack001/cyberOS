@@ -42,8 +42,8 @@ grep -q "^$DISK" /proc/mounts 2>/dev/null && die "$DISK is mounted — unmount i
 if [[ $YES -eq 0 ]]; then
   read -rp "Hostname [$HOSTNAME_]: " x; HOSTNAME_=${x:-$HOSTNAME_}
   read -rp "Username [$USER_]: " x; USER_=${x:-$USER_}
-  while [[ -z $PASS ]]; do read -rsp "Password for $USER_: " PASS; echo; done
-  read -rsp "Root password [same as user]: " ROOTPASS; echo
+  while [[ -z $PASS ]]; do read -rsp "Password for $USER_ (typing is hidden): " PASS; echo; done
+  read -rsp "Root password [same as user] (hidden): " ROOTPASS; echo
   read -rp "Timezone [$TZ_]: " x; TZ_=${x:-$TZ_}
   read -rp "Filesystem ext4/btrfs [$FS]: " x; FS=${x:-$FS}
   echo; lsblk "$DISK"; echo
