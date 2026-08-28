@@ -83,7 +83,7 @@ qt6-wayland
 
 # ---- Hyprland desktop ----
 hyprland
-hyprpaper
+swaybg
 hyprlock
 hypridle
 hyprpolkitagent

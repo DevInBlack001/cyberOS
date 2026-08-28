@@ -7,7 +7,7 @@ students boot the USB, try it, and run one command to install it to disk.
 | Requirement          | What ships                                              |
 |----------------------|---------------------------------------------------------|
 | Base OS              | Arch Linux (rolling)                                    |
-| Tiling WM            | Hyprland + waybar, rofi, mako, hyprlock, hypridle       |
+| Tiling WM            | Hyprland + waybar, rofi, mako, swaybg, hyprlock, hypridle       |
 | Display manager      | SDDM with the **Pixie** theme (`pixie-sddm-git`)        |
 | Editors              | Neovim (themed config), VS Code (Microsoft build)       |
 | Terminal             | foot + tmux (Ctrl-a prefix)                             |
