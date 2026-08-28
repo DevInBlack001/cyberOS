@@ -54,6 +54,7 @@ ROOTPASS=${ROOTPASS:-$PASS}
 [[ -f /usr/share/zoneinfo/$TZ_ ]] || die "unknown timezone $TZ_"
 
 UEFI=0; [[ -d /sys/firmware/efi/efivars ]] && UEFI=1
+echo "Firmware mode: $([[ $UEFI -eq 1 ]] && echo UEFI || echo "legacy BIOS")"
 part() { if [[ $DISK == *nvme* || $DISK == *mmcblk* ]]; then echo "${DISK}p$1"; else echo "${DISK}$1"; fi; }
 
 # ---------------------------------------------------------------- partition
@@ -64,6 +65,8 @@ sgdisk -Z "$DISK" >/dev/null
 sgdisk -n1:0:+1M   -t1:ef02 -c1:"BIOS boot" \
        -n2:0:+1G   -t2:ef00 -c2:"EFI" \
        -n3:0:0     -t3:8304 -c3:"CyberOS root" "$DISK" >/dev/null
+# Legacy BIOSes (VMware, some PCs) only boot GPT disks if the protective MBR is flagged bootable
+parted -s "$DISK" disk_set pmbr_boot on
 partprobe "$DISK"; udevadm settle; sleep 1
 EFI=$(part 2); ROOT=$(part 3)
 
@@ -179,10 +182,10 @@ mkinitcpio -P
 # bootloader (GRUB for both firmware types)
 sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="CyberOS"/' /etc/default/grub
 sed -i 's/^#\?GRUB_DISABLE_OS_PROBER=.*/GRUB_DISABLE_OS_PROBER=false/' /etc/default/grub
-grub-install --target=i386-pc --recheck "$DISK" >/dev/null 2>&1 || echo "(BIOS grub-install skipped)"
+grub-install --target=i386-pc --recheck "$DISK" || echo "WARNING: BIOS grub-install failed (fine on UEFI-only machines)"
 if [[ $UEFI -eq 1 ]]; then
   grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=CyberOS --recheck
-  grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable >/dev/null 2>&1 || true
+  grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable || true
 fi
 grub-mkconfig -o /boot/grub/grub.cfg
 CH
