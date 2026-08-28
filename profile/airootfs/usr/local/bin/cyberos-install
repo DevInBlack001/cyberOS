@@ -1,0 +1,187 @@
+#!/usr/bin/env bash
+# ============================================================================
+#  cyberos-install — copy the running CyberOS live system to a disk.
+#
+#  The installed machine ends up IDENTICAL to the live ISO (same packages,
+#  same theme), minus the live-only bits (autologin, archiso initramfs hooks).
+#
+#  Usage (interactive):   sudo cyberos-install
+#  Usage (unattended):    sudo cyberos-install --disk /dev/nvme0n1 --hostname lab-07 \
+#                             --user student --password 'S3cret!' --tz America/New_York --yes
+# ============================================================================
+set -euo pipefail
+
+DISK="" HOSTNAME_="cyberos" USER_="student" PASS="" ROOTPASS="" TZ_="UTC" FS="ext4" YES=0 SWAP_GB=4
+
+usage() { sed -n '3,12p' "$0"; exit 1; }
+die()   { echo "ERROR: $*" >&2; exit 1; }
+msg()   { printf '\n\033[1;32m==> %s\033[0m\n' "$*"; }
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --disk) DISK=$2; shift 2;;      --hostname) HOSTNAME_=$2; shift 2;;
+    --user) USER_=$2; shift 2;;     --password) PASS=$2; shift 2;;
+    --root-password) ROOTPASS=$2; shift 2;;
+    --tz) TZ_=$2; shift 2;;         --fs) FS=$2; shift 2;;
+    --swap) SWAP_GB=$2; shift 2;;   --yes|-y) YES=1; shift;;
+    -h|--help) usage;; *) die "unknown option $1";;
+  esac
+done
+
+[[ $EUID -eq 0 ]]        || die "run as root (sudo cyberos-install)"
+[[ -d /run/archiso ]]    || die "this must be run from the CyberOS live ISO"
+[[ $FS == ext4 || $FS == btrfs ]] || die "--fs must be ext4 or btrfs"
+
+# ---------------------------------------------------------------- interactive
+if [[ -z $DISK ]]; then
+  echo; lsblk -dpno NAME,SIZE,MODEL,TRAN | grep -vE 'loop|sr0|/dev/zram'; echo
+  read -rp "Target disk (e.g. /dev/sda) — IT WILL BE WIPED: " DISK
+fi
+[[ -b $DISK ]] || die "$DISK is not a block device"
+grep -q "^$DISK" /proc/mounts 2>/dev/null && die "$DISK is mounted — unmount it first"
+if [[ $YES -eq 0 ]]; then
+  read -rp "Hostname [$HOSTNAME_]: " x; HOSTNAME_=${x:-$HOSTNAME_}
+  read -rp "Username [$USER_]: " x; USER_=${x:-$USER_}
+  while [[ -z $PASS ]]; do read -rsp "Password for $USER_: " PASS; echo; done
+  read -rsp "Root password [same as user]: " ROOTPASS; echo
+  read -rp "Timezone [$TZ_]: " x; TZ_=${x:-$TZ_}
+  read -rp "Filesystem ext4/btrfs [$FS]: " x; FS=${x:-$FS}
+  echo; lsblk "$DISK"; echo
+  read -rp "Type ERASE to wipe $DISK and install CyberOS: " c; [[ $c == ERASE ]] || die "aborted"
+fi
+[[ -n $PASS ]] || die "--password is required with --yes"
+ROOTPASS=${ROOTPASS:-$PASS}
+[[ -f /usr/share/zoneinfo/$TZ_ ]] || die "unknown timezone $TZ_"
+
+UEFI=0; [[ -d /sys/firmware/efi/efivars ]] && UEFI=1
+part() { if [[ $DISK == *nvme* || $DISK == *mmcblk* ]]; then echo "${DISK}p$1"; else echo "${DISK}$1"; fi; }
+
+# ---------------------------------------------------------------- partition
+msg "Partitioning $DISK (GPT: BIOS-boot 1M, EFI 1G, root rest)"
+swapoff -a 2>/dev/null || true
+wipefs -af "$DISK" >/dev/null
+sgdisk -Z "$DISK" >/dev/null
+sgdisk -n1:0:+1M   -t1:ef02 -c1:"BIOS boot" \
+       -n2:0:+1G   -t2:ef00 -c2:"EFI" \
+       -n3:0:0     -t3:8304 -c3:"CyberOS root" "$DISK" >/dev/null
+partprobe "$DISK"; udevadm settle; sleep 1
+EFI=$(part 2); ROOT=$(part 3)
+
+msg "Formatting"
+mkfs.fat -F32 -n CYBEROS_EFI "$EFI" >/dev/null
+if [[ $FS == btrfs ]]; then
+  mkfs.btrfs -f -L CYBEROS "$ROOT" >/dev/null
+  mount "$ROOT" /mnt; btrfs subvolume create /mnt/@ >/dev/null; btrfs subvolume create /mnt/@home >/dev/null; umount /mnt
+  mount -o subvol=@,compress=zstd,noatime "$ROOT" /mnt
+  mkdir -p /mnt/home; mount -o subvol=@home,compress=zstd,noatime "$ROOT" /mnt/home
+else
+  mkfs.ext4 -qF -L CYBEROS "$ROOT"
+  mount "$ROOT" /mnt
+fi
+mkdir -p /mnt/boot/efi; mount "$EFI" /mnt/boot/efi
+
+# ---------------------------------------------------------------- copy system
+msg "Copying system (this takes a few minutes)"
+rsync -aHAXx --info=progress2 --no-inc-recursive \
+  --exclude={/dev/*,/proc/*,/sys/*,/tmp/*,/run/*,/mnt/*,/media/*,/lost+found,/boot/efi/*} \
+  --exclude=/etc/mkinitcpio.conf.d/archiso.conf \
+  --exclude=/etc/sddm.conf.d/zz-live-autologin.conf \
+  --exclude=/etc/systemd/system/etc-pacman.d-gnupg.mount \
+  --exclude=/etc/systemd/system/pacman-init.service \
+  --exclude=/etc/systemd/system/multi-user.target.wants/pacman-init.service \
+  --exclude=/etc/systemd/journald.conf.d/volatile-storage.conf \
+  --exclude=/etc/systemd/logind.conf.d/do-not-suspend.conf \
+  --exclude=/etc/systemd/resolved.conf.d/archiso.conf \
+  --exclude=/etc/systemd/system-generators/systemd-gpt-auto-generator \
+  --exclude=/etc/ssh/sshd_config.d/10-archiso.conf \
+  --exclude=/etc/pacman.d/hooks/zzzz99-remove-custom-hooks-from-airootfs.hook \
+  --exclude=/etc/motd \
+  --exclude=/root/customize_airootfs.sh \
+  / /mnt/
+mkdir -p /mnt/{dev,proc,sys,tmp,run,mnt,media}
+chmod 1777 /mnt/tmp
+
+# ---------------------------------------------------------------- configure
+msg "Configuring installed system"
+echo "$HOSTNAME_" > /mnt/etc/hostname
+printf '127.0.0.1 localhost\n::1 localhost\n127.0.1.1 %s\n' "$HOSTNAME_" > /mnt/etc/hosts
+rm -f /mnt/etc/resolv.conf; touch /mnt/etc/resolv.conf     # NetworkManager manages it
+printf 'CyberOS \\r (\\l)\n\n' > /mnt/etc/issue
+cat > /mnt/etc/motd <<'M'
+  CyberOS — Cyber Department. Type `fastfetch` for system info.
+M
+cat > /mnt/etc/mkinitcpio.d/linux.preset <<'M'
+# mkinitcpio preset file for the 'linux' package
+ALL_kver="/boot/vmlinuz-linux"
+PRESETS=('default' 'fallback')
+default_image="/boot/initramfs-linux.img"
+fallback_image="/boot/initramfs-linux-fallback.img"
+fallback_options="-S autodetect"
+M
+genfstab -U /mnt > /mnt/etc/fstab
+
+# swapfile
+if [[ $SWAP_GB -gt 0 ]]; then
+  if [[ $FS == btrfs ]]; then
+    btrfs subvolume create /mnt/swap >/dev/null
+    btrfs filesystem mkswapfile --size "${SWAP_GB}g" /mnt/swap/swapfile >/dev/null
+    echo '/swap/swapfile none swap defaults 0 0' >> /mnt/etc/fstab
+  else
+    mkswap -U clear --size "${SWAP_GB}G" --file /mnt/swapfile >/dev/null
+    echo '/swapfile none swap defaults 0 0' >> /mnt/etc/fstab
+  fi
+fi
+
+# first-boot oneshot
+cat > /mnt/etc/systemd/system/cyberos-firstboot.service <<'M'
+[Unit]
+Description=CyberOS first boot tasks
+After=local-fs.target
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/cyberos-firstboot
+[Install]
+WantedBy=multi-user.target
+M
+
+msg "Finalising inside chroot"
+arch-chroot /mnt /bin/bash -e <<CH
+ln -sf /usr/share/zoneinfo/$TZ_ /etc/localtime
+hwclock --systohc || true
+
+# users
+if [[ "$USER_" != "student" ]]; then
+  useradd -m -G wheel,adm,uucp,audio,video,input,storage,vboxusers,wireshark -s /usr/bin/zsh "$USER_"
+  cp -rT /etc/skel /home/$USER_ && chown -R $USER_:$USER_ /home/$USER_
+  userdel -r student 2>/dev/null || true
+fi
+echo "$USER_:$PASS" | chpasswd
+echo "root:$ROOTPASS" | chpasswd
+
+# drop live-only pieces
+pacman -Rns --noconfirm mkinitcpio-archiso >/dev/null 2>&1 || true
+rm -rf /etc/mkinitcpio.conf.d/archiso.conf /etc/sddm.conf.d/zz-live-autologin.conf
+systemctl enable NetworkManager sddm bluetooth cyberos-firstboot >/dev/null 2>&1
+systemctl disable ModemManager >/dev/null 2>&1 || true
+
+# pacman keyring for future online updates
+pacman-key --init >/dev/null 2>&1
+pacman-key --populate archlinux >/dev/null 2>&1
+
+mkinitcpio -P
+
+# bootloader (GRUB for both firmware types)
+sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="CyberOS"/' /etc/default/grub
+sed -i 's/^#\?GRUB_DISABLE_OS_PROBER=.*/GRUB_DISABLE_OS_PROBER=false/' /etc/default/grub
+grub-install --target=i386-pc --recheck "$DISK" >/dev/null 2>&1 || echo "(BIOS grub-install skipped)"
+if [[ $UEFI -eq 1 ]]; then
+  grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=CyberOS --recheck
+  grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable >/dev/null 2>&1 || true
+fi
+grub-mkconfig -o /boot/grub/grub.cfg
+CH
+
+msg "Done. Unmounting."
+sync; umount -R /mnt
+echo
+echo "CyberOS installed on $DISK  (user: $USER_, host: $HOSTNAME_). Remove the USB and reboot."

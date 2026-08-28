@@ -1,0 +1,119 @@
+# CyberOS — Cyber Department Arch Linux spin
+
+A reproducible [archiso](https://wiki.archlinux.org/title/Archiso) profile that builds a
+**live + installer ISO** for the four-year programme. Everything is pre-installed and themed;
+students boot the USB, try it, and run one command to install it to disk.
+
+| Requirement          | What ships                                              |
+|----------------------|---------------------------------------------------------|
+| Base OS              | Arch Linux (rolling)                                    |
+| Tiling WM            | Hyprland + waybar, wofi, mako, hyprlock, hypridle       |
+| Display manager      | SDDM with the **Pixie** theme (`pixie-sddm-git`)        |
+| Editors              | Neovim (themed config), VS Code (Microsoft build)       |
+| Terminal             | **tmax** (tiling multi-terminal, `Super+T`) + foot + tmux |
+| Browser              | Firefox                                                 |
+| Office               | OnlyOffice Desktop Editors (`onlyoffice-bin`)           |
+| Virtualisation       | VirtualBox (+ dkms host modules), guest utils for VMs   |
+| Networking           | Cisco Packet Tracer (`packettracer`), Wireshark, nmap   |
+| Security lab         | metasploit, ghidra, radare2, burp-free alternatives (sqlmap, nikto, gobuster), john, hashcat, hydra, aircrack-ng, bettercap, impacket, masscan, binwalk, volatility3, sleuthkit, yara, clamav, lynis, docker |
+| Theme                | "Cyber Department" — `#0A0E14` base, `#00FF9C` / `#00D4FF` accents, custom wallpaper, Papirus icons, JetBrainsMono Nerd Font |
+
+Live credentials: **student / student** (auto-login), root: **root**.
+
+## Layout
+
+```
+cyberos/
+├── build.sh              # one-shot builder: AUR → local repo → mkarchiso
+├── test-vm.sh            # boot the ISO in QEMU/UEFI
+├── aur/packages.txt      # AUR packages to build into repo/   (+ put the Packet Tracer .deb here)
+├── aur/tmax/PKGBUILD     # local PKGBUILD: tmax with bundled Electron (AUR tmax-bin needs a dead electron30)
+├── repo/                 # generated local pacman repo of the AUR builds
+├── out/                  # finished ISOs
+└── profile/              # the archiso profile
+    ├── profiledef.sh     # ISO name/label/version, permissions
+    ├── packages.x86_64   # EVERYTHING installed on the image (edit this to add/remove software)
+    ├── pacman.conf.in    # build-time pacman.conf (local [cyberos] repo)
+    └── airootfs/         # files overlaid onto the root filesystem
+        ├── etc/skel/.config/{hypr,waybar,foot,tmux,nvim,wofi,mako,...}   ← the theme
+        ├── etc/sddm.conf.d/           # Pixie theme, live autologin
+        ├── etc/{passwd,shadow,group}  # live users
+        ├── root/customize_airootfs.sh # runs in the chroot during the build
+        ├── usr/local/bin/cyberos-install   # the installer
+        └── usr/share/backgrounds/cyberos/wallpaper.png
+```
+
+## Building
+
+On an Arch Linux host (a VM is fine; needs ~15 GB free, internet, ~20–40 min):
+
+```bash
+sudo pacman -S archiso base-devel git
+# Packet Tracer is licensed: log in at https://www.netacad.com, download
+#   "CiscoPacketTracer_<ver>_Ubuntu_64bit.deb" and copy it to aur/
+./build.sh                  # → out/cyberos-YYYY.MM.DD-x86_64.iso
+./test-vm.sh                # boot it in QEMU  (pacman -S qemu-desktop edk2-ovmf)
+```
+
+Useful flags: `./build.sh --skip-aur` (reuse repo/), `--only-aur`, `--clean`.
+
+Write to USB: `sudo dd if=out/cyberos-*.iso of=/dev/sdX bs=4M status=progress oflag=sync`
+(or Ventoy / Rufus in DD mode).
+
+## Installing on a student machine
+
+Boot the USB (UEFI or legacy BIOS both work), log in, open a terminal (`Super+Enter`) and:
+
+```bash
+sudo cyberos-install                       # interactive
+# or unattended, e.g. for imaging a lab:
+sudo cyberos-install --disk /dev/nvme0n1 --hostname lab-07 --user student \
+     --password 'ChangeMe!' --tz Africa/Accra --fs ext4 --yes
+```
+
+The installer wipes the chosen disk (GPT: BIOS-boot + 1 GB EFI + root), copies the live system,
+removes the live-only pieces (autologin, archiso initramfs hooks), creates the user, sets up a
+4 GB swapfile and installs GRUB for both UEFI and BIOS. The result is byte-for-byte the same
+software set as the ISO. `archinstall` is also on the ISO if you prefer a stock Arch install.
+
+## Customising
+
+* **Add/remove software** → `profile/packages.x86_64` (official repos) or `aur/packages.txt` (AUR).
+* **Theme/keybinds** → `profile/airootfs/etc/skel/.config/…`. Colours live in
+  `hypr/theme.conf`, `waybar/style.css`, `foot/foot.ini`, `nvim/lua/cyber.lua`.
+* **Wallpaper** → replace `airootfs/usr/share/backgrounds/cyberos/wallpaper.png` (also used by
+  the SDDM greeter and the lock screen).
+* **Name/version** → `profile/profiledef.sh`, `airootfs/etc/os-release`.
+* **NVIDIA labs** → uncomment `nvidia-open-dkms` in `packages.x86_64`.
+* **Security-lab tools** → the "security lab toolset" block in `packages.x86_64`; AUR-only
+  extras (ffuf, burpsuite, responder, …) are listed there as a comment — add them to
+  `aur/packages.txt` to include them.
+* **Keeping installed machines updated** → host `repo/` on an internal web server and
+  uncomment the `[cyberos]` block in `airootfs/etc/pacman.conf`; otherwise the AUR packages
+  stay at the version baked into the ISO while everything else updates from Arch mirrors.
+
+## Key bindings (Hyprland)
+
+| Keys | Action |
+|------|--------|
+| `Super+Enter` | terminal (foot) |
+| `Super+T` | tmax (multi-terminal) |
+| `Super+D` | app launcher |
+| `Super+B` / `E` / `C` | Firefox / files / VS Code |
+| `Super+Q` | close window |
+| `Super+H/J/K/L` | focus, `+Shift` move |
+| `Super+1..0` | workspaces, `+Shift` move window |
+| `Super+F` / `V` | fullscreen / float |
+| `Super+Shift+L` | lock |
+| `Print` | screenshot region → clipboard |
+
+## Notes / caveats
+
+* Arch is rolling: rebuild the ISO each term so students start from fresh packages.
+* `virtualbox-host-dkms` and (optionally) `nvidia-open-dkms` are compiled during the build,
+  so builds are slower than a plain archiso.
+* Packet Tracer's PKGBUILD pins a checksum; `build.sh` re-computes it for the `.deb` you supply.
+* Hyprland ≥ 0.56 prefers a Lua config (`hyprland.lua`) but still loads the classic
+  `hyprland.conf` shipped here. If a future release drops legacy parsing, port
+  `etc/skel/.config/hypr/hyprland.conf` — see https://wiki.hypr.land/Configuring/.
+* Secure Boot is not supported by archiso out of the box — disable it in firmware or enrol keys.

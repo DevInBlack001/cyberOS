@@ -1,0 +1,3 @@
+{ "logo": { "type": "small", "color": { "1": "green" } },
+  "display": { "color": "green" },
+  "modules": ["title","separator","os","kernel","wm","shell","terminal","cpu","gpu","memory","disk"] }

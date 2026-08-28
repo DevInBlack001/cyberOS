@@ -1,0 +1,5 @@
+work/
+out/
+repo/
+profile/pacman.conf
+aur/*.deb

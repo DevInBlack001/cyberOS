@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Runs once on the first boot of an INSTALLED CyberOS system (enabled by cyberos-install).
+set -e
+xdg-user-dirs-update 2>/dev/null || true
+systemctl disable cyberos-firstboot.service 2>/dev/null || true
+rm -f /etc/systemd/system/cyberos-firstboot.service

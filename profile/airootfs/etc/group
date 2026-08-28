@@ -1,0 +1,11 @@
+root:x:0:root
+adm:x:4:student
+wheel:x:10:student
+uucp:x:14:student
+audio:x:995:student
+video:x:985:student
+input:x:994:student
+storage:x:987:student
+vboxusers:x:108:student
+wireshark:x:150:student
+student:x:1000:

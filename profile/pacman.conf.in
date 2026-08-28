@@ -1,0 +1,21 @@
+#
+# pacman.conf used by mkarchiso while BUILDING the ISO.
+# The [cyberos] repo is a local directory produced by build.sh (AUR packages).
+# The system inside the ISO gets a clean config from airootfs/etc/pacman.conf.
+#
+[options]
+HoldPkg     = pacman glibc
+Architecture = auto
+ParallelDownloads = 8
+SigLevel    = Required DatabaseOptional
+LocalFileSigLevel = Optional
+
+[core]
+Include = /etc/pacman.d/mirrorlist
+
+[extra]
+Include = /etc/pacman.d/mirrorlist
+
+[cyberos]
+SigLevel = Optional TrustAll
+Server = file://@REPO_DIR@

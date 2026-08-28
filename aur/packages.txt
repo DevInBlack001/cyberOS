@@ -1,0 +1,7 @@
+# Packages built by build.sh into repo/.
+# A name with aur/<name>/PKGBUILD is built from that local PKGBUILD; otherwise it is cloned from the AUR.
+pixie-sddm-git
+visual-studio-code-bin
+onlyoffice-bin
+packettracer
+tmax

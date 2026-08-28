@@ -1,0 +1,8 @@
+width=640
+height=420
+show=drun
+prompt=run
+allow_images=true
+image_size=24
+insensitive=true
+matching=fuzzy

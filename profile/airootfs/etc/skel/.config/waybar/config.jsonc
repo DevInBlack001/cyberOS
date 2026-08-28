@@ -1,0 +1,49 @@
+{
+    "layer": "top",
+    "position": "top",
+    "height": 32,
+    "spacing": 6,
+    "modules-left": ["hyprland/workspaces", "hyprland/window"],
+    "modules-center": ["clock"],
+    "modules-right": ["tray", "cpu", "memory", "network", "bluetooth", "pulseaudio", "battery"],
+
+    "hyprland/workspaces": {
+        "format": "{icon}",
+        "on-click": "activate",
+        "format-icons": { "default": "", "active": "", "urgent": "" },
+        "persistent-workspaces": { "*": 5 }
+    },
+    "hyprland/window": { "max-length": 60, "separate-outputs": true },
+    "clock": {
+        "format": "  {:%a %d %b   %H:%M}",
+        "tooltip-format": "<tt><small>{calendar}</small></tt>"
+    },
+    "cpu": { "format": "  {usage}%", "interval": 3 },
+    "memory": { "format": "  {percentage}%", "interval": 5 },
+    "network": {
+        "format-wifi": "  {essid}",
+        "format-ethernet": "󰈀  {ipaddr}",
+        "format-disconnected": "󰖪  offline",
+        "tooltip-format": "{ifname}: {ipaddr}/{cidr}  gw {gwaddr}",
+        "on-click": "nm-connection-editor"
+    },
+    "bluetooth": {
+        "format": "",
+        "format-connected": " {num_connections}",
+        "format-disabled": "",
+        "on-click": "blueman-manager"
+    },
+    "pulseaudio": {
+        "format": "{icon} {volume}%",
+        "format-muted": "  muted",
+        "format-icons": { "default": ["", "", ""] },
+        "on-click": "pavucontrol"
+    },
+    "battery": {
+        "states": { "warning": 25, "critical": 10 },
+        "format": "{icon} {capacity}%",
+        "format-charging": "󰂄 {capacity}%",
+        "format-icons": ["", "", "", "", ""]
+    },
+    "tray": { "spacing": 8 }
+}
