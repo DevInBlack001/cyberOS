@@ -16,7 +16,7 @@ students boot the USB, try it, and run one command to install it to disk.
 | Virtualisation       | VirtualBox (+ dkms host modules), guest utils for VMs   |
 | Networking           | Cisco Packet Tracer (`packettracer`), Wireshark, nmap   |
 | Security lab         | metasploit, ghidra, radare2, burp-free alternatives (sqlmap, nikto, gobuster), john, hashcat, hydra, aircrack-ng, bettercap, impacket, masscan, binwalk, volatility3, sleuthkit, yara, clamav, lynis, docker |
-| Theme                | "Cyber Department" — `#0A0E14` base, `#00FF9C` / `#00D4FF` accents, custom wallpaper, Papirus icons, JetBrainsMono Nerd Font |
+| Theme                | "Cyber Department" on the **UMaT brand palette** (umat.edu.gh): green `#004C23`, gold `#FFCB06`, dark base `#0B1610`, accent green `#3DBB6E`; custom wallpaper, Papirus icons, JetBrainsMono Nerd Font |
 
 Live credentials: **student / student** (auto-login), root: **root**.
 

@@ -3,6 +3,6 @@ PRETTY_NAME="CyberOS (Arch Linux)"
 ID=arch
 ID_LIKE=arch
 BUILD_ID=rolling
-ANSI_COLOR="38;2;0;255;156"
+ANSI_COLOR="38;2;255;203;6"
 HOME_URL="https://archlinux.org/"
 LOGO=cyberos

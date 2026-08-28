@@ -1,11 +1,12 @@
 /* Cyber Department theme */
-@define-color bg      #0A0E14;
-@define-color surface #11161F;
-@define-color fg      #E6EDF3;
-@define-color accent  #00FF9C;
-@define-color accent2 #00D4FF;
-@define-color alert   #FF2A6D;
-@define-color muted   #6B7A90;
+@define-color bg      #0B1610;
+@define-color brand   #004C23;
+@define-color surface #12241A;
+@define-color fg      #ECF1EE;
+@define-color accent  #FFCB06;
+@define-color accent2 #3DBB6E;
+@define-color alert   #C41118;
+@define-color muted   #7A8F82;
 
 * {
     font-family: "JetBrainsMono Nerd Font", monospace;
@@ -14,9 +15,10 @@
 }
 
 window#waybar {
-    background: alpha(@bg, 0.92);
+    background: alpha(@brand, 0.90);
     color: @fg;
     border-bottom: 2px solid @accent;
+    
 }
 
 #workspaces button {
@@ -39,6 +41,6 @@ window#waybar {
     border-radius: 6px;
 }
 #clock { color: @accent; font-weight: bold; }
-#battery.warning  { color: #F5D90A; }
+#battery.warning  { color: #FFB600; }
 #battery.critical { color: @alert; }
 #network.disconnected { color: @alert; }
