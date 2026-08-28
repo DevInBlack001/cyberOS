@@ -223,8 +223,7 @@ lynis
 docker
 docker-compose
 # ---- from the local [cyberos] repo (AUR + local PKGBUILDs, built by build.sh) ----
-tmax
 pixie-sddm-git
 visual-studio-code-bin
 onlyoffice-bin
-packettracer
+#packettracer   # re-enable once CiscoPacketTracer_*.deb is in aur/

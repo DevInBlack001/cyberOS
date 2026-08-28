@@ -10,7 +10,7 @@ students boot the USB, try it, and run one command to install it to disk.
 | Tiling WM            | Hyprland + waybar, rofi, mako, hyprlock, hypridle       |
 | Display manager      | SDDM with the **Pixie** theme (`pixie-sddm-git`)        |
 | Editors              | Neovim (themed config), VS Code (Microsoft build)       |
-| Terminal             | **tmax** (tiling multi-terminal, `Super+T`) + foot + tmux |
+| Terminal             | foot + tmux (Ctrl-a prefix)                             |
 | Browser              | Firefox                                                 |
 | Office               | OnlyOffice Desktop Editors (`onlyoffice-bin`)           |
 | Virtualisation       | VirtualBox (+ dkms host modules), guest utils for VMs   |
@@ -27,7 +27,6 @@ cyberos/
 ├── build.sh              # one-shot builder: AUR → local repo → mkarchiso
 ├── test-vm.sh            # boot the ISO in QEMU/UEFI
 ├── aur/packages.txt      # AUR packages to build into repo/   (+ put the Packet Tracer .deb here)
-├── aur/tmax/PKGBUILD     # local PKGBUILD: tmax with bundled Electron (AUR tmax-bin needs a dead electron30)
 ├── repo/                 # generated local pacman repo of the AUR builds
 ├── out/                  # finished ISOs
 └── profile/              # the archiso profile
@@ -97,7 +96,6 @@ software set as the ISO. `archinstall` is also on the ISO if you prefer a stock 
 | Keys | Action |
 |------|--------|
 | `Super+Enter` | terminal (foot) |
-| `Super+T` | tmax (multi-terminal) |
 | `Super+D` | app launcher (rofi) |
 | `Super+Tab` | window switcher |
 | `Super+.` / `Super+=` | emoji picker / calculator |

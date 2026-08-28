@@ -3,5 +3,4 @@
 pixie-sddm-git
 visual-studio-code-bin
 onlyoffice-bin
-packettracer
-tmax
+#packettracer   # re-enable once CiscoPacketTracer_*.deb is in aur/
