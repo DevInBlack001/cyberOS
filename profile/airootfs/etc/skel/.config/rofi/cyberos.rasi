@@ -1,0 +1,39 @@
+* {
+    bg:      #0B1610F2;
+    surface: #12241A;
+    brand:   #004C23;
+    border:  #1E3A2A;
+    fg:      #ECF1EE;
+    muted:   #7A8F82;
+    accent:  #FFCB06;
+    accent2: #3DBB6E;
+    background-color: transparent;
+    text-color: @fg;
+}
+window {
+    width: 640px;
+    background-color: @bg;
+    border: 2px;
+    border-color: @accent;
+    border-radius: 8px;
+    padding: 12px;
+}
+mainbox { spacing: 10px; }
+inputbar {
+    background-color: @surface;
+    border: 1px; border-color: @border; border-radius: 6px;
+    padding: 8px 12px; spacing: 8px;
+    children: [ prompt, entry ];
+}
+prompt { text-color: @accent; }
+entry { placeholder: "search…"; placeholder-color: @muted; }
+listview { lines: 8; spacing: 2px; scrollbar: false; }
+element { padding: 6px 10px; border-radius: 6px; spacing: 10px; }
+element normal.normal { text-color: @fg; }
+element selected.normal { background-color: @brand; text-color: @accent; }
+element-icon { size: 22px; }
+element-text { vertical-align: 0.5; }
+mode-switcher { spacing: 6px; }
+button { padding: 6px; border-radius: 6px; background-color: @surface; text-color: @muted; }
+button selected { background-color: @brand; text-color: @accent; }
+message { padding: 6px; }

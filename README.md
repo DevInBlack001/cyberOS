@@ -7,7 +7,7 @@ students boot the USB, try it, and run one command to install it to disk.
 | Requirement          | What ships                                              |
 |----------------------|---------------------------------------------------------|
 | Base OS              | Arch Linux (rolling)                                    |
-| Tiling WM            | Hyprland + waybar, wofi, mako, hyprlock, hypridle       |
+| Tiling WM            | Hyprland + waybar, rofi, mako, hyprlock, hypridle       |
 | Display manager      | SDDM with the **Pixie** theme (`pixie-sddm-git`)        |
 | Editors              | Neovim (themed config), VS Code (Microsoft build)       |
 | Terminal             | **tmax** (tiling multi-terminal, `Super+T`) + foot + tmux |
@@ -98,7 +98,9 @@ software set as the ISO. `archinstall` is also on the ISO if you prefer a stock 
 |------|--------|
 | `Super+Enter` | terminal (foot) |
 | `Super+T` | tmax (multi-terminal) |
-| `Super+D` | app launcher |
+| `Super+D` | app launcher (rofi) |
+| `Super+Tab` | window switcher |
+| `Super+.` / `Super+=` | emoji picker / calculator |
 | `Super+B` / `E` / `C` | Firefox / files / VS Code |
 | `Super+Q` | close window |
 | `Super+H/J/K/L` | focus, `+Shift` move |

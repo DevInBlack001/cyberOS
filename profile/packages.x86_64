@@ -90,7 +90,9 @@ xdg-desktop-portal-hyprland
 xdg-desktop-portal-gtk
 xdg-user-dirs
 waybar
-wofi
+rofi
+rofi-emoji
+rofi-calc
 mako
 swayosd
 grim
