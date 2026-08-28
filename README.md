@@ -70,10 +70,26 @@ sudo cyberos-install --disk /dev/nvme0n1 --hostname lab-07 --user student \
      --password 'ChangeMe!' --tz Africa/Accra --fs ext4 --yes
 ```
 
-The installer wipes the chosen disk (GPT: BIOS-boot + 1 GB EFI + root), copies the live system,
-removes the live-only pieces (autologin, archiso initramfs hooks), creates the user, sets up a
-4 GB swapfile and installs GRUB for both UEFI and BIOS. The result is byte-for-byte the same
-software set as the ISO. `archinstall` is also on the ISO if you prefer a stock Arch install.
+The installer offers two modes:
+
+* **Erase whole disk** — automatic GPT layout (BIOS-boot 1 MiB + EFI 1 GiB + root), ext4 or btrfs,
+  4 GiB swapfile. Boots on UEFI *and* legacy BIOS (protective-MBR boot flag is set for picky firmware).
+* **Manual** — opens `cfdisk` on the chosen disk so you can shrink/keep other operating systems, then
+  asks which partitions to use for `/` (formatted), the EFI System partition (keep or format — keeping
+  an existing Windows ESP gives you dual boot via GRUB's os-prober), and an optional `/home`
+  (keep or format).
+
+Unattended examples:
+
+```bash
+sudo cyberos-install --disk /dev/nvme0n1 --erase --hostname lab-07 --user student --password 'x' --tz Africa/Accra --yes
+sudo cyberos-install --disk /dev/sda --root /dev/sda5 --efi /dev/sda1 --home /dev/sda6 --password 'x' --yes
+```
+
+Either way it copies the live system, removes the live-only pieces (autologin, passwordless sudo,
+archiso initramfs hooks, sleep masks), creates the user, installs GRUB for both UEFI and BIOS, and
+the result is byte-for-byte the same software set as the ISO. `archinstall` is also on the ISO if
+you prefer a stock Arch install.
 
 ## Customising
 

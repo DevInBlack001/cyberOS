@@ -6,20 +6,31 @@
 #  same theme), minus the live-only bits (autologin, archiso initramfs hooks).
 #
 #  Usage (interactive):   sudo cyberos-install
-#  Usage (unattended):    sudo cyberos-install --disk /dev/nvme0n1 --hostname lab-07 \
-#                             --user student --password 'S3cret!' --tz America/New_York --yes
+#     -> choose "Erase whole disk" (automatic layout) or "Manual" (cfdisk, pick
+#        root / EFI / home partitions; keeps other operating systems).
+#
+#  Unattended, erase:      sudo cyberos-install --disk /dev/nvme0n1 --erase --hostname lab-07 \
+#                              --user student --password 'S3cret!' --tz Africa/Accra --yes
+#  Unattended, manual:     sudo cyberos-install --disk /dev/sda --root /dev/sda5 --efi /dev/sda1 \
+#                              [--format-efi] [--home /dev/sda6 [--format-home]] --password ... --yes
+#  Other options:          --root-password P  --fs ext4|btrfs  --swap <GiB|0>
 # ============================================================================
 set -euo pipefail
 
-DISK="" HOSTNAME_="cyberos" USER_="student" PASS="" ROOTPASS="" TZ_="UTC" FS="ext4" YES=0 SWAP_GB=4
+DISK="" MODE="" ROOTP="" EFIP="" HOMEP="" FORMAT_EFI=0 FORMAT_HOME=0
+HOSTNAME_="cyberos" USER_="student" PASS="" ROOTPASS="" TZ_="UTC" FS="ext4" YES=0 SWAP_GB=4
 
-usage() { sed -n '3,12p' "$0"; exit 1; }
+usage() { sed -n '3,17p' "$0"; exit 1; }
 die()   { echo "ERROR: $*" >&2; exit 1; }
 msg()   { printf '\n\033[1;32m==> %s\033[0m\n' "$*"; }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --disk) DISK=$2; shift 2;;      --hostname) HOSTNAME_=$2; shift 2;;
+    --erase) MODE=erase; shift;;    --manual) MODE=manual; shift;;
+    --root) ROOTP=$2; MODE=manual; shift 2;;
+    --efi) EFIP=$2; shift 2;;       --format-efi) FORMAT_EFI=1; shift;;
+    --home) HOMEP=$2; shift 2;;     --format-home) FORMAT_HOME=1; shift;;
     --user) USER_=$2; shift 2;;     --password) PASS=$2; shift 2;;
     --root-password) ROOTPASS=$2; shift 2;;
     --tz) TZ_=$2; shift 2;;         --fs) FS=$2; shift 2;;
@@ -32,13 +43,63 @@ done
 [[ -d /run/archiso ]]    || die "this must be run from the CyberOS live ISO"
 [[ $FS == ext4 || $FS == btrfs ]] || die "--fs must be ext4 or btrfs"
 
-# ---------------------------------------------------------------- interactive
+UEFI=0; [[ -d /sys/firmware/efi/efivars ]] && UEFI=1
+echo "Firmware mode: $([[ $UEFI -eq 1 ]] && echo UEFI || echo "legacy BIOS")"
+part() { if [[ $DISK == *nvme* || $DISK == *mmcblk* ]]; then echo "${DISK}p$1"; else echo "${DISK}$1"; fi; }
+show_disks() { echo; lsblk -dpno NAME,SIZE,MODEL,TRAN | grep -vE 'loop|sr0|/dev/zram'; echo; }
+show_parts() { echo; lsblk -pno NAME,SIZE,FSTYPE,PARTTYPENAME,LABEL,MOUNTPOINTS "$DISK"; echo; }
+
+# ---------------------------------------------------------------- disk + mode
 if [[ -z $DISK ]]; then
-  echo; lsblk -dpno NAME,SIZE,MODEL,TRAN | grep -vE 'loop|sr0|/dev/zram'; echo
-  read -rp "Target disk (e.g. /dev/sda) — IT WILL BE WIPED: " DISK
+  show_disks; read -rp "Target disk (e.g. /dev/sda): " DISK
 fi
 [[ -b $DISK ]] || die "$DISK is not a block device"
-grep -q "^$DISK" /proc/mounts 2>/dev/null && die "$DISK is mounted — unmount it first"
+if [[ -z $MODE ]]; then
+  if [[ $YES -eq 1 ]]; then MODE=erase; else
+    echo
+    echo "  1) Erase whole disk  — automatic layout (BIOS-boot + EFI + root). Everything on $DISK is lost."
+    echo "  2) Manual            — partition $DISK yourself (cfdisk), keep other OSes, pick partitions."
+    read -rp "Choose [1/2]: " m; case "$m" in 2) MODE=manual;; *) MODE=erase;; esac
+  fi
+fi
+
+if [[ $MODE == manual && $YES -eq 0 ]]; then
+  show_parts
+  read -rp "Open cfdisk to edit the partition table of $DISK? [Y/n]: " x
+  if [[ ${x:-Y} =~ ^[Yy] ]]; then
+    echo "Tips: GPT disks need a 1 MiB 'BIOS boot' partition for legacy-BIOS GRUB, and an EFI System"
+    echo "      partition (>=300 MiB, FAT32) for UEFI. Create a Linux filesystem partition for /."
+    read -rp "Press Enter to open cfdisk..." _
+    cfdisk "$DISK"; partprobe "$DISK" 2>/dev/null || true; udevadm settle
+  fi
+  show_parts
+  while [[ -z $ROOTP || ! -b $ROOTP ]]; do read -rp "Root (/) partition (will be FORMATTED as $FS): " ROOTP; done
+  if [[ $UEFI -eq 1 ]]; then
+    while [[ -z $EFIP || ! -b $EFIP ]]; do read -rp "EFI System partition (e.g. ${DISK}1): " EFIP; done
+    if blkid -o value -s TYPE "$EFIP" 2>/dev/null | grep -q vfat; then
+      read -rp "Format $EFIP? (say n to keep an existing Windows/Linux EFI partition) [y/N]: " x; [[ $x =~ ^[Yy] ]] && FORMAT_EFI=1
+    else FORMAT_EFI=1; fi
+  else
+    read -rp "EFI System partition (optional, Enter to skip): " EFIP
+    [[ -n $EFIP && ! -b $EFIP ]] && die "$EFIP is not a partition"
+    [[ -n $EFIP ]] && { read -rp "Format $EFIP? [y/N]: " x; [[ $x =~ ^[Yy] ]] && FORMAT_EFI=1; }
+  fi
+  read -rp "Separate /home partition (optional, Enter to skip): " HOMEP
+  if [[ -n $HOMEP ]]; then
+    [[ -b $HOMEP ]] || die "$HOMEP is not a partition"
+    read -rp "Format $HOMEP? (n keeps existing data) [y/N]: " x; [[ $x =~ ^[Yy] ]] && FORMAT_HOME=1
+  fi
+fi
+if [[ $MODE == manual ]]; then
+  [[ -b ${ROOTP:-/nonexistent} ]] || die "--root <partition> is required for manual mode"
+  [[ $UEFI -eq 0 || -b ${EFIP:-/nonexistent} ]] || die "--efi <partition> is required on UEFI systems"
+  for p_ in $ROOTP $EFIP $HOMEP; do grep -q "^$p_ " /proc/mounts && die "$p_ is mounted — unmount it first"; done
+  [[ $ROOTP != "$EFIP" && $ROOTP != "$HOMEP" ]] || die "root/efi/home must be different partitions"
+else
+  grep -q "^$DISK" /proc/mounts 2>/dev/null && die "$DISK is mounted — unmount it first"
+fi
+
+# ---------------------------------------------------------------- account details
 if [[ $YES -eq 0 ]]; then
   read -rp "Hostname [$HOSTNAME_]: " x; HOSTNAME_=${x:-$HOSTNAME_}
   read -rp "Username [$USER_]: " x; USER_=${x:-$USER_}
@@ -46,42 +107,63 @@ if [[ $YES -eq 0 ]]; then
   read -rsp "Root password [same as user] (hidden): " ROOTPASS; echo
   read -rp "Timezone [$TZ_]: " x; TZ_=${x:-$TZ_}
   read -rp "Filesystem ext4/btrfs [$FS]: " x; FS=${x:-$FS}
-  echo; lsblk "$DISK"; echo
-  read -rp "Type ERASE to wipe $DISK and install CyberOS: " c; [[ $c == ERASE ]] || die "aborted"
+  echo
+  if [[ $MODE == erase ]]; then
+    lsblk "$DISK"; echo
+    read -rp "Type ERASE to wipe $DISK and install CyberOS: " c; [[ $c == ERASE ]] || die "aborted"
+  else
+    echo "Summary:  /     -> $ROOTP  (format $FS)"
+    [[ -n $EFIP ]]  && echo "          /boot/efi -> $EFIP  ($([[ $FORMAT_EFI -eq 1 ]] && echo format || echo keep))"
+    [[ -n $HOMEP ]] && echo "          /home -> $HOMEP  ($([[ $FORMAT_HOME -eq 1 ]] && echo format || echo keep))"
+    read -rp "Type INSTALL to proceed: " c; [[ $c == INSTALL ]] || die "aborted"
+  fi
 fi
 [[ -n $PASS ]] || die "--password is required with --yes"
 ROOTPASS=${ROOTPASS:-$PASS}
 [[ -f /usr/share/zoneinfo/$TZ_ ]] || die "unknown timezone $TZ_"
+[[ $FS == ext4 || $FS == btrfs ]] || die "filesystem must be ext4 or btrfs"
 
-UEFI=0; [[ -d /sys/firmware/efi/efivars ]] && UEFI=1
-echo "Firmware mode: $([[ $UEFI -eq 1 ]] && echo UEFI || echo "legacy BIOS")"
-part() { if [[ $DISK == *nvme* || $DISK == *mmcblk* ]]; then echo "${DISK}p$1"; else echo "${DISK}$1"; fi; }
-
-# ---------------------------------------------------------------- partition
-msg "Partitioning $DISK (GPT: BIOS-boot 1M, EFI 1G, root rest)"
+# ---------------------------------------------------------------- partition (erase mode)
 swapoff -a 2>/dev/null || true
-wipefs -af "$DISK" >/dev/null
-sgdisk -Z "$DISK" >/dev/null
-sgdisk -n1:0:+1M   -t1:ef02 -c1:"BIOS boot" \
-       -n2:0:+1G   -t2:ef00 -c2:"EFI" \
-       -n3:0:0     -t3:8304 -c3:"CyberOS root" "$DISK" >/dev/null
-# Legacy BIOSes (VMware, some PCs) only boot GPT disks if the protective MBR is flagged bootable
-parted -s "$DISK" disk_set pmbr_boot on
-partprobe "$DISK"; udevadm settle; sleep 1
-EFI=$(part 2); ROOT=$(part 3)
-
-msg "Formatting"
-mkfs.fat -F32 -n CYBEROS_EFI "$EFI" >/dev/null
-if [[ $FS == btrfs ]]; then
-  mkfs.btrfs -f -L CYBEROS "$ROOT" >/dev/null
-  mount "$ROOT" /mnt; btrfs subvolume create /mnt/@ >/dev/null; btrfs subvolume create /mnt/@home >/dev/null; umount /mnt
-  mount -o subvol=@,compress=zstd,noatime "$ROOT" /mnt
-  mkdir -p /mnt/home; mount -o subvol=@home,compress=zstd,noatime "$ROOT" /mnt/home
+if [[ $MODE == erase ]]; then
+  msg "Partitioning $DISK (GPT: BIOS-boot 1M, EFI 1G, root rest)"
+  wipefs -af "$DISK" >/dev/null
+  sgdisk -Z "$DISK" >/dev/null
+  sgdisk -n1:0:+1M   -t1:ef02 -c1:"BIOS boot" \
+         -n2:0:+1G   -t2:ef00 -c2:"EFI" \
+         -n3:0:0     -t3:8304 -c3:"CyberOS root" "$DISK" >/dev/null
+  # Legacy BIOSes (VMware, some PCs) only boot GPT disks if the protective MBR is flagged bootable
+  parted -s "$DISK" disk_set pmbr_boot on
+  partprobe "$DISK"; udevadm settle; sleep 1
+  EFIP=$(part 2); ROOTP=$(part 3); FORMAT_EFI=1; HOMEP=""
 else
-  mkfs.ext4 -qF -L CYBEROS "$ROOT"
-  mount "$ROOT" /mnt
+  # keep whatever table the user made; just make sure a GPT disk is BIOS-bootable too
+  if [[ $(blkid -o value -s PTTYPE "$DISK" 2>/dev/null) == gpt ]]; then parted -s "$DISK" disk_set pmbr_boot on 2>/dev/null || true; fi
 fi
-mkdir -p /mnt/boot/efi; mount "$EFI" /mnt/boot/efi
+
+# ---------------------------------------------------------------- format + mount
+msg "Formatting"
+if [[ $FS == btrfs ]]; then
+  mkfs.btrfs -f -L CYBEROS "$ROOTP" >/dev/null
+  mount "$ROOTP" /mnt; btrfs subvolume create /mnt/@ >/dev/null
+  [[ -z $HOMEP ]] && btrfs subvolume create /mnt/@home >/dev/null
+  umount /mnt
+  mount -o subvol=@,compress=zstd,noatime "$ROOTP" /mnt
+  mkdir -p /mnt/home
+  [[ -z $HOMEP ]] && mount -o subvol=@home,compress=zstd,noatime "$ROOTP" /mnt/home
+else
+  mkfs.ext4 -qF -L CYBEROS "$ROOTP"
+  mount "$ROOTP" /mnt
+  mkdir -p /mnt/home
+fi
+if [[ -n $HOMEP ]]; then
+  [[ $FORMAT_HOME -eq 1 ]] && mkfs.ext4 -qF -L CYBEROS_HOME "$HOMEP"
+  mount "$HOMEP" /mnt/home
+fi
+if [[ -n $EFIP ]]; then
+  [[ $FORMAT_EFI -eq 1 ]] && mkfs.fat -F32 -n CYBEROS_EFI "$EFIP" >/dev/null
+  mkdir -p /mnt/boot/efi; mount "$EFIP" /mnt/boot/efi
+fi
 
 # ---------------------------------------------------------------- copy system
 msg "Copying system (this takes a few minutes)"
@@ -183,7 +265,7 @@ mkinitcpio -P
 sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="CyberOS"/' /etc/default/grub
 sed -i 's/^#\?GRUB_DISABLE_OS_PROBER=.*/GRUB_DISABLE_OS_PROBER=false/' /etc/default/grub
 grub-install --target=i386-pc --recheck "$DISK" || echo "WARNING: BIOS grub-install failed (fine on UEFI-only machines)"
-if [[ $UEFI -eq 1 ]]; then
+if [[ $UEFI -eq 1 && -n "$EFIP" ]]; then
   grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=CyberOS --recheck
   grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable || true
 fi
