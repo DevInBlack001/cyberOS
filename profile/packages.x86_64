@@ -43,6 +43,7 @@ gptfdisk
 parted
 efibootmgr
 grub
+syslinux
 os-prober
 testdisk
 squashfs-tools
