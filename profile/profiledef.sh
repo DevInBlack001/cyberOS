@@ -26,6 +26,7 @@ file_permissions=(
   ["/root/.gnupg"]="0:0:700"
   ["/root/customize_airootfs.sh"]="0:0:755"
   ["/usr/local/bin/cyberos-install"]="0:0:755"
+  ["/usr/local/bin/cyberos-install-gui"]="0:0:755"
   ["/usr/local/bin/cyberos-firstboot"]="0:0:755"
   ["/usr/local/bin/cyberos-repair-boot"]="0:0:755"
 )

@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# ============================================================================
+#  cyberos-install-gui — wrapper used by the "Install CyberOS" launcher.
+#
+#  cyberos-install runs under `set -e`, so a failure exits immediately. When
+#  the launcher ran it as `foot -e sudo cyberos-install`, the terminal closed
+#  with the script and the error was never readable. This keeps the window
+#  open and tees everything to a log so a failed install can be diagnosed.
+# ============================================================================
+LOG=/tmp/cyberos-install.log
+
+sudo /usr/local/bin/cyberos-install 2>&1 | tee "$LOG"
+rc=${PIPESTATUS[0]}
+
+echo
+if [[ $rc -eq 0 ]]; then
+  printf '\033[1;32m==> Installation finished.\033[0m  Log: %s\n' "$LOG"
+else
+  printf '\033[1;31m==> Installation FAILED (exit %s).\033[0m  Log: %s\n' "$rc" "$LOG"
+  echo "    The error is in the last lines above. To copy it out:  cat $LOG"
+fi
+echo
+read -rp "Press Enter to close this window..." _
