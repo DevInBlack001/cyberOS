@@ -7,5 +7,5 @@
   ╚═════╝   ╚═╝   ╚═════╝ ╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝
             Cyber Department  ·  Arch Linux + Hyprland
 
-  Live user: student / student      Root password: root
+  Live user: student (no password)   Root: no password
   To install to disk:  sudo cyberos-install

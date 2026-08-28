@@ -86,6 +86,7 @@ rsync -aHAXx --info=progress2 --no-inc-recursive \
   --exclude={/dev/*,/proc/*,/sys/*,/tmp/*,/run/*,/mnt/*,/media/*,/lost+found,/boot/efi/*} \
   --exclude=/etc/mkinitcpio.conf.d/archiso.conf \
   --exclude=/etc/sddm.conf.d/zz-live-autologin.conf \
+  --exclude=/etc/sudoers.d/20-live-student \
   --exclude=/etc/systemd/system/etc-pacman.d-gnupg.mount \
   --exclude=/etc/systemd/system/pacman-init.service \
   --exclude=/etc/systemd/system/multi-user.target.wants/pacman-init.service \

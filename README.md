@@ -18,7 +18,7 @@ students boot the USB, try it, and run one command to install it to disk.
 | Security lab         | metasploit, ghidra, radare2, burp-free alternatives (sqlmap, nikto, gobuster), john, hashcat, hydra, aircrack-ng, bettercap, impacket, masscan, binwalk, volatility3, sleuthkit, yara, clamav, lynis, docker |
 | Theme                | "Cyber Department" on the **UMaT brand palette** (umat.edu.gh): green `#004C23`, gold `#FFCB06`, dark base `#0B1610`, accent green `#3DBB6E`; custom wallpaper, Papirus icons, JetBrainsMono Nerd Font |
 
-Live credentials: **student / student** (auto-login), root: **root**.
+Live session: auto-login as **student**, no password (passwordless `sudo`); root also has no password. Real passwords are set by the installer.
 
 ## Layout
 
