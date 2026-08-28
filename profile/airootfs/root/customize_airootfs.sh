@@ -39,5 +39,13 @@ chown -R 1000:1000 /home/student/.config/Code
 groupadd -f wireshark || true
 usermod -aG wireshark student || true
 
-# keep the live image lean
+# Arch's stock mirrorlist ships with every Server line commented out, so both the
+# live session and anything installed from it fail every sync with "no servers
+# configured for repository". Enable the two worldwide CDN mirrors; students can
+# narrow them down with reflector later.
+sed -i -E 's@^#(Server = https://(fastly|geo)\.mirror\.pkgbuild\.com/.*)@\1@' /etc/pacman.d/mirrorlist
+grep -q '^Server' /etc/pacman.d/mirrorlist || { echo 'no mirrors enabled in /etc/pacman.d/mirrorlist' >&2; exit 1; }
+
+# keep the live image lean (the empty sync dir stays, or pacman warns on every call)
 rm -rf /var/cache/pacman/pkg/* /var/lib/pacman/sync/* /root/.cache /home/student/.cache
+mkdir -p /var/lib/pacman/sync

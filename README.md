@@ -123,7 +123,7 @@ you prefer a stock Arch install.
 | `Super+H/J/K/L` | focus, `+Shift` move |
 | `Super+1..0` | workspaces, `+Shift` move window |
 | `Super+F` / `V` | fullscreen / float |
-| `Super+Shift+L` | lock |
+| `Super+Escape` | lock |
 | `Print` | screenshot region → clipboard |
 
 ## Notes / caveats

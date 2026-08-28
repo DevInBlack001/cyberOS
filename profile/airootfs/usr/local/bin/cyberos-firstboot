@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # Runs once on the first boot of an INSTALLED CyberOS system (enabled by cyberos-install).
 set -e
-xdg-user-dirs-update 2>/dev/null || true
+# This is a system service running as root, so a bare `xdg-user-dirs-update`
+# would only ever write root's own config. Do it for each real user instead.
+while IFS=: read -r name _ uid _ _ home _; do
+  [[ $uid -ge 1000 && $uid -lt 65534 && -d $home ]] || continue
+  runuser -u "$name" -- xdg-user-dirs-update 2>/dev/null || true
+done < /etc/passwd
 systemctl disable cyberos-firstboot.service 2>/dev/null || true
 rm -f /etc/systemd/system/cyberos-firstboot.service
