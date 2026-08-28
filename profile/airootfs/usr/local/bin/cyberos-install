@@ -261,13 +261,15 @@ pacman-key --populate archlinux >/dev/null 2>&1
 
 mkinitcpio -P
 
-# bootloader (GRUB for both firmware types)
+# bootloader: ALWAYS install both BIOS and UEFI GRUB so the disk boots whatever the firmware mode
 sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="CyberOS"/' /etc/default/grub
 sed -i 's/^#\?GRUB_DISABLE_OS_PROBER=.*/GRUB_DISABLE_OS_PROBER=false/' /etc/default/grub
 grub-install --target=i386-pc --recheck "$DISK" || echo "WARNING: BIOS grub-install failed (fine on UEFI-only machines)"
-if [[ $UEFI -eq 1 && -n "$EFIP" ]]; then
-  grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=CyberOS --recheck
-  grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable || true
+if mountpoint -q /boot/efi; then
+  # removable path (EFI/BOOT/BOOTX64.EFI): works with no NVRAM entry, from a BIOS-booted live session too
+  grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=CyberOS --removable --no-nvram --recheck
+  # proper NVRAM entry when we are actually running under UEFI
+  [[ $UEFI -eq 1 ]] && grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=CyberOS --recheck || true
 fi
 grub-mkconfig -o /boot/grub/grub.cfg
 CH

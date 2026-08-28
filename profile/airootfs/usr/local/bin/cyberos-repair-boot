@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Reinstall GRUB (BIOS + UEFI) on an existing CyberOS installation from the live ISO.
+#   sudo cyberos-repair-boot            (interactive)
+#   sudo cyberos-repair-boot /dev/sda3 /dev/sda2   (root partition, EFI partition)
+set -euo pipefail
+[[ $EUID -eq 0 ]] || { echo "run with sudo"; exit 1; }
+ROOTP=${1:-}; EFIP=${2:-}
+if [[ -z $ROOTP ]]; then lsblk -pno NAME,SIZE,FSTYPE,LABEL,PARTTYPENAME | grep -vE 'loop|sr0'; read -rp "Root (/) partition: " ROOTP; read -rp "EFI partition (Enter if none): " EFIP; fi
+[[ -b $ROOTP ]] || { echo "$ROOTP is not a partition"; exit 1; }
+DISK=$(lsblk -pno PKNAME "$ROOTP" | head -1)
+mount "$ROOTP" /mnt
+if [[ $(blkid -o value -s TYPE "$ROOTP") == btrfs ]]; then umount /mnt; mount -o subvol=@ "$ROOTP" /mnt; fi
+[[ -n $EFIP ]] && { mkdir -p /mnt/boot/efi; mount "$EFIP" /mnt/boot/efi; }
+[[ $(blkid -o value -s PTTYPE "$DISK") == gpt ]] && parted -s "$DISK" disk_set pmbr_boot on || true
+arch-chroot /mnt grub-install --target=i386-pc --recheck "$DISK" || echo "BIOS grub-install failed (ok on UEFI-only)"
+if [[ -n $EFIP ]]; then
+  arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=CyberOS --removable --no-nvram --recheck
+  [[ -d /sys/firmware/efi/efivars ]] && arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=CyberOS --recheck || true
+fi
+arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
+umount -R /mnt
+echo "Bootloader reinstalled on $DISK. Remove the ISO and reboot."

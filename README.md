@@ -88,7 +88,9 @@ sudo cyberos-install --disk /dev/sda --root /dev/sda5 --efi /dev/sda1 --home /de
 
 Either way it copies the live system, removes the live-only pieces (autologin, passwordless sudo,
 archiso initramfs hooks, sleep masks), creates the user, installs GRUB for both UEFI and BIOS, and
-the result is byte-for-byte the same software set as the ISO. `archinstall` is also on the ISO if
+the result is byte-for-byte the same software set as the ISO. GRUB is installed for **both** BIOS and UEFI
+regardless of how the live ISO was booted. If a machine ever loses its bootloader, boot the ISO and run
+`sudo cyberos-repair-boot`. `archinstall` is also on the ISO if
 you prefer a stock Arch install.
 
 ## Customising
