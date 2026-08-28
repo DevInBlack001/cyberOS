@@ -5,7 +5,7 @@
     "spacing": 6,
     "modules-left": ["hyprland/workspaces", "hyprland/window"],
     "modules-center": ["clock"],
-    "modules-right": ["tray", "cpu", "memory", "network", "bluetooth", "pulseaudio", "battery"],
+    "modules-right": ["custom/install", "tray", "cpu", "memory", "network", "bluetooth", "pulseaudio", "battery"],
 
     "hyprland/workspaces": {
         "format": "{icon}",
@@ -45,5 +45,11 @@
         "format-charging": "󰂄 {capacity}%",
         "format-icons": ["", "", "", "", ""]
     },
-    "tray": { "spacing": 8 }
+    "tray": { "spacing": 8 },
+    "custom/install": {
+        "exec": "test -d /run/archiso && echo '  Install CyberOS' || true",
+        "interval": "once",
+        "on-click": "gtk-launch cyberos-install",
+        "tooltip": false
+    }
 }

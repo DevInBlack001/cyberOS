@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Install CyberOS
+Comment=Install CyberOS to this computer's disk
+Exec=foot -T "Install CyberOS" -e sudo /usr/local/bin/cyberos-install
+Icon=drive-harddisk
+Terminal=false
+Categories=System;
+Keywords=install;setup;disk;

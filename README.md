@@ -97,6 +97,7 @@ software set as the ISO. `archinstall` is also on the ISO if you prefer a stock 
 |------|--------|
 | `Super+Enter` | terminal (foot) |
 | `Super+D` | app launcher (rofi) |
+| `Super+I` | Install CyberOS (live ISO) |
 | `Super+Tab` | window switcher |
 | `Super+.` / `Super+=` | emoji picker / calculator |
 | `Super+B` / `E` / `C` | Firefox / files / VS Code |
