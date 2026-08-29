@@ -114,7 +114,10 @@ class Wizard(Adw.ApplicationWindow):
     def _page(self, title, subtitle, child=None):
         page = Adw.StatusPage(title=title, description=subtitle)
         if child is not None:
-            page.set_child(child)
+            # Clamp form content to a readable column instead of letting rows
+            # stretch the full width of the screen.
+            page.set_child(Adw.Clamp(maximum_size=600,
+                                     tightening_threshold=400, child=child))
         return page
 
     def page_welcome(self):
@@ -127,15 +130,21 @@ class Wizard(Adw.ApplicationWindow):
     def page_disk(self):
         self.disk_list = Gtk.StringList()
         for name, size, model in self.disks:
-            self.disk_list.append(f"{name}   {size}   {model}".rstrip())
+            # Keep the label short. A long model string in a row suffix squeezes
+            # the row's own title down to a single wrapped character column.
+            label = f"{name}  ({size})"
+            if model:
+                label += f"  {model[:22]}"
+            self.disk_list.append(label)
         if not self.disks:
             self.disk_list.append("no disks found")
-        self.disk_drop = Gtk.DropDown(model=self.disk_list)
+        # ComboRow rather than ActionRow + DropDown: it lays the selected value
+        # out properly instead of fighting the title for width.
+        self.disk_row = Adw.ComboRow(title="Install to",
+                                     subtitle="The entire disk will be erased",
+                                     model=self.disk_list)
         group = Adw.PreferencesGroup(title="Target disk")
-        row = Adw.ActionRow(title="Install to",
-                            subtitle="The entire disk will be erased")
-        row.add_suffix(self.disk_drop)
-        group.add(row)
+        group.add(self.disk_row)
         return self._page("Choose a disk", None, group)
 
     def page_account(self):
@@ -260,10 +269,10 @@ class Wizard(Adw.ApplicationWindow):
         return problem is None
 
     def selected_disk(self):
-        return self.disks[self.disk_drop.get_selected()][0]
+        return self.disks[self.disk_row.get_selected()][0]
 
     def fill_summary(self):
-        name, size, model = self.disks[self.disk_drop.get_selected()]
+        name, size, model = self.disks[self.disk_row.get_selected()]
         self.summary.set_markup(
             f"<b>Disk</b>\t{GLib.markup_escape_text(name)}  {size}  "
             f"{GLib.markup_escape_text(model)}\n"
