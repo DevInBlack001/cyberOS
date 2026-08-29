@@ -1,0 +1,31 @@
+# CyberOS code owners.
+#
+# GitHub auto-requests a review from the owner of every path a PR touches.
+# The LAST matching pattern wins, so the catch-all comes first.
+#
+# Everything is @edbron until contributors take areas over — replace the
+# handle on a line to hand that area to someone else.
+
+*                                           @edbron
+
+# ---- installer: install, repair, first boot -------------------------------
+/profile/airootfs/usr/local/bin/            @edbron
+
+# ---- theme: Hyprland, waybar, rofi, foot, SDDM, wallpapers ----------------
+/profile/airootfs/etc/skel/.config/         @edbron
+/profile/airootfs/usr/share/sddm/           @edbron
+/profile/airootfs/usr/share/backgrounds/    @edbron
+/assets/                                    @edbron
+
+# ---- packages: what ships in the ISO --------------------------------------
+/profile/packages.x86_64                    @edbron
+/aur/                                       @edbron
+
+# ---- build: tooling and image definition ----------------------------------
+/build.sh                                   @edbron
+/test-vm.sh                                 @edbron
+/profile/profiledef.sh                      @edbron
+/profile/pacman.conf.in                     @edbron
+
+# ---- docs -----------------------------------------------------------------
+/README.md                                  @edbron
