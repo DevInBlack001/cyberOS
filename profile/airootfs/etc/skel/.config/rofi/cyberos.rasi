@@ -1,12 +1,6 @@
+@import "colors.rasi"
+
 * {
-    bg:      #0B1610F2;
-    surface: #12241A;
-    brand:   #004C23;
-    border:  #1E3A2A;
-    fg:      #ECF1EE;
-    muted:   #7A8F82;
-    accent:  #FFCB06;
-    accent2: #3DBB6E;
     background-color: transparent;
     text-color: @fg;
 }

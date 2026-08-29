@@ -19,7 +19,7 @@ for the Cyber Department, University of Mines and Technology, Tarkwa.
 | Virtualisation       | VirtualBox (+ dkms host modules), guest utils for VMs   |
 | Networking           | Cisco Packet Tracer (`packettracer`), Wireshark, nmap   |
 | Security lab         | metasploit, ghidra, radare2, burp-free alternatives (sqlmap, nikto, gobuster), john, hashcat, hydra, aircrack-ng, bettercap, impacket, masscan, binwalk, volatility3, sleuthkit, yara, clamav, lynis, docker |
-| Theme                | "Cyber Department" on the **UMaT brand palette** (umat.edu.gh): green `#004C23`, gold `#FFCB06`, dark base `#0B1610`, accent green `#3DBB6E`; custom wallpaper, Papirus icons, JetBrainsMono Nerd Font |
+| Theme                | macOS window UI palette — Red Shimmer `#FF605C`, Coronation Gold `#FFBD44`, Malachite `#00CA4E`, Light Silver `#E1DFE1`, Argent `#C0BFC0`, Tech White `#F5F5F5`. **Light by default, `Super+Shift+T` toggles dark.** Custom wallpaper per mode, Papirus icons, JetBrainsMono Nerd Font |
 
 Live session: auto-login as **student**, no password (passwordless `sudo`); root also has no password. Real passwords are set by the installer.
 
@@ -117,6 +117,29 @@ you prefer a stock Arch install.
 * **Keeping installed machines updated** → host `repo/` on an internal web server and
   uncomment the `[cyberos]` block in `airootfs/etc/pacman.conf`; otherwise the AUR packages
   stay at the version baked into the ISO while everything else updates from Arch mirrors.
+
+## Light and dark
+
+CyberOS ships light and switches with one command or `Super+Shift+T`:
+
+```bash
+cyberos-theme            # print the current mode
+cyberos-theme dark
+cyberos-theme toggle
+```
+
+The palette lives in `cyberos-theme` alone, which generates the colours for
+Hyprland, waybar, rofi, foot, mako, tmux and Neovim, sets the GTK/libadwaita
+colour scheme, and swaps the wallpaper. There is one source of truth, so the
+applications cannot drift apart. Already-open terminals keep their colours;
+new ones pick the new palette up.
+
+Two notes on the palette. It is six colours — three accents and three near
+whites — with no dark tone, so light mode adds a readable text colour
+(`#1D1D1F`, `#6E6E73` muted) and dark mode adds backgrounds (`#1D1D1F`,
+`#2B2B2D`, `#3A3A3C`); dark mode then uses Tech White and Argent for text.
+ANSI terminals need eight hues where the palette gives three, so
+blue/magenta/cyan follow the macOS system colours.
 
 ## Key bindings (Hyprland)
 

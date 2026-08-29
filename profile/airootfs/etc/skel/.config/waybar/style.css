@@ -3,9 +3,7 @@
    which is where @background and @foreground come from on Omarchy. That file
    does not exist here, and without it every rule referencing those colours is
    dropped and the bar renders unstyled — so define them in the UMaT palette. */
-@define-color background  rgba(11, 22, 16, 0.92);
-@define-color foreground  #ECF1EE;
-@define-color transparent rgba(0, 0, 0, 0);
+@import "colors.css";
 
 /* --- Global-Settings ---*/
 

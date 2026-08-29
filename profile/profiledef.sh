@@ -28,6 +28,7 @@ file_permissions=(
   # mkarchiso copies airootfs/ with --no-preserve=mode, so anything needing the
   # execute bit must be listed here — git's 755 on the source file is not enough.
   ["/etc/skel/.config/rofi/powermenu.sh"]="0:0:755"
+  ["/usr/local/bin/cyberos-theme"]="0:0:755"
   ["/usr/local/bin/cyberos-install"]="0:0:755"
   ["/usr/local/bin/cyberos-install-gui"]="0:0:755"
   ["/usr/local/bin/cyberos-firstboot"]="0:0:755"
