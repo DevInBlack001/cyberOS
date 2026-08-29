@@ -4,6 +4,9 @@ A reproducible [archiso](https://wiki.archlinux.org/title/Archiso) profile that 
 **live + installer ISO** for the four-year programme. Everything is pre-installed and themed;
 students boot the USB, try it, and run one command to install it to disk.
 
+Created and maintained by **edbron** ([github.com/edbron](https://github.com/edbron))
+for the Cyber Department, University of Mines and Technology, Tarkwa.
+
 | Requirement          | What ships                                              |
 |----------------------|---------------------------------------------------------|
 | Base OS              | Arch Linux (rolling)                                    |
@@ -138,3 +141,19 @@ you prefer a stock Arch install.
   not needed yet. If a release drops legacy parsing, port
   `etc/skel/.config/hypr/hyprland.conf` — see https://wiki.hypr.land/Configuring/.
 * Secure Boot is not supported by archiso out of the box — disable it in firmware or enrol keys.
+
+## Author & credits
+
+CyberOS — the archiso profile, installer, theming and build tooling in this repository —
+is the original work of **edbron**, for the Cyber Department at the University of Mines
+and Technology, Tarkwa.
+
+It stands on other people's work, which keeps its own authorship:
+
+* [Arch Linux](https://archlinux.org) and [archiso](https://wiki.archlinux.org/title/Archiso)
+* [Hyprland](https://hypr.land) and the wider hypr ecosystem (hyprlock, hypridle)
+* **Pixie** SDDM theme — xCaptaiN09 (`pixie-sddm-git`)
+* waybar theme — [HANCORE-linux/waybar-themes](https://github.com/HANCORE-linux/waybar-themes)
+  V2.3, adapted here for CyberOS
+* The UMaT brand palette belongs to the University of Mines and Technology.
+
