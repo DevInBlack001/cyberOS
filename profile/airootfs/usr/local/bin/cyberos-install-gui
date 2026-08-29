@@ -64,6 +64,32 @@ def list_disks():
     return disks
 
 
+def free_space_gib(disk):
+    """Size of the largest unallocated block, as the installer measures it."""
+    try:
+        first = int(subprocess.run(["sgdisk", "-F", disk], capture_output=True,
+                                   text=True, check=True).stdout.strip())
+        last = int(subprocess.run(["sgdisk", "-E", disk], capture_output=True,
+                                  text=True, check=True).stdout.strip())
+    except (OSError, ValueError, subprocess.CalledProcessError):
+        return 0
+    return max(0, (last - first + 1) * 512 // 2 ** 30)
+
+
+def partitions(disk):
+    """(device, size, fstype, label) for each partition on the disk."""
+    out = subprocess.run(
+        ["lsblk", "-pnro", "NAME,SIZE,FSTYPE,PARTTYPENAME", disk],
+        capture_output=True, text=True, check=False).stdout
+    rows = []
+    for line in out.splitlines()[1:]:
+        f = line.split(None, 3)
+        if len(f) >= 2:
+            rows.append((f[0], f[1], f[2] if len(f) > 2 else "",
+                         f[3] if len(f) > 3 else ""))
+    return rows
+
+
 def timezones():
     try:
         out = subprocess.run(["timedatectl", "list-timezones"],
@@ -99,15 +125,20 @@ class Wizard(Adw.ApplicationWindow):
         self.stack.set_vexpand(True)
         self.set_content(box)
 
-        self.pages = ["welcome", "disk", "account", "options", "confirm", "install", "done"]
+        self.mode = "erase"
+        self.pages = ["welcome", "disk", "mode", "custom", "account", "options",
+                      "confirm", "install", "done"]
+        # Set before the pages are built: constructing the mode page activates a
+        # radio, whose handler calls back into sync_buttons() and needs these.
+        self.index = 0
         for name, build in (
             ("welcome", self.page_welcome), ("disk", self.page_disk),
+            ("mode", self.page_mode), ("custom", self.page_custom),
             ("account", self.page_account), ("options", self.page_options),
             ("confirm", self.page_confirm), ("install", self.page_install),
             ("done", self.page_done),
         ):
             self.stack.add_named(build(), name)
-        self.index = 0
         self.sync_buttons()
 
     # ---------------------------------------------------------------- pages
@@ -146,6 +177,118 @@ class Wizard(Adw.ApplicationWindow):
         group = Adw.PreferencesGroup(title="Target disk")
         group.add(self.disk_row)
         return self._page("Choose a disk", None, group)
+
+    def page_mode(self):
+        # Created before the radios: set_active() below fires toggled, which
+        # writes to this label.
+        self.mode_hint = Gtk.Label(wrap=True, css_classes=["dim-label"])
+        group = Adw.PreferencesGroup(title="What should the installer do?")
+        self.mode_buttons = {}
+        first = None
+        for key, title, subtitle in (
+            ("alongside", "Install alongside",
+             "Use existing free space. Other operating systems and their files "
+             "are left alone."),
+            ("erase", "Erase the whole disk",
+             "Everything currently on the disk is destroyed."),
+            ("manual", "Custom partitioning",
+             "Choose which existing partitions to use."),
+        ):
+            row = Adw.ActionRow(title=title, subtitle=subtitle)
+            btn = Gtk.CheckButton()
+            if first is None:
+                first = btn
+            else:
+                btn.set_group(first)
+            btn.connect("toggled", self.on_mode_toggled, key)
+            row.add_prefix(btn)
+            row.set_activatable_widget(btn)
+            group.add(row)
+            self.mode_buttons[key] = btn
+        self.mode_buttons["erase"].set_active(True)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        box.append(group)
+        box.append(self.mode_hint)
+        return self._page("Installation type", None, box)
+
+    def on_mode_toggled(self, button, key):
+        if button.get_active():
+            self.mode = key
+            self.refresh_mode_hint()
+            self.sync_buttons()
+
+    def refresh_mode_hint(self):
+        if not self.disks:
+            return
+        disk = self.selected_disk()
+        if self.mode == "alongside":
+            gib = free_space_gib(disk)
+            if gib < 25:
+                self.mode_hint.set_text(
+                    f"Only {gib} GiB of unallocated space on {disk}. At least "
+                    "25 GiB is needed. Shrink an existing partition first — "
+                    "Disk Management on Windows, gparted on Linux — then come back.")
+            else:
+                self.mode_hint.set_text(
+                    f"{gib} GiB of free space on {disk} will be used. Existing "
+                    "partitions are not resized or deleted.")
+        elif self.mode == "erase":
+            self.mode_hint.set_text(f"Every partition on {disk} will be destroyed.")
+        else:
+            self.mode_hint.set_text("")
+
+    def page_custom(self):
+        group = Adw.PreferencesGroup(
+            title="Existing partitions",
+            description="Partition the disk first with a tool like cfdisk if needed.")
+        self.part_root = Adw.ComboRow(title="Root (/)",
+                                      subtitle="Will be formatted")
+        self.part_efi = Adw.ComboRow(title="EFI system partition")
+        self.fmt_efi = Gtk.Switch(valign=Gtk.Align.CENTER)
+        efi_fmt_row = Adw.ActionRow(
+            title="Format the EFI partition",
+            subtitle="Leave off to keep another OS's bootloader")
+        efi_fmt_row.add_suffix(self.fmt_efi)
+        for w in (self.part_root, self.part_efi, efi_fmt_row):
+            group.add(w)
+        self.custom_hint = Gtk.Label(css_classes=["error"], visible=False, wrap=True)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.append(group)
+        box.append(self.custom_hint)
+        return self._page("Choose partitions", None, box)
+
+    def validate_custom(self):
+        if not getattr(self, "part_devices", None):
+            problem = "No partitions on this disk. Create some first."
+        elif (self.part_root.get_selected() == self.part_efi.get_selected()):
+            problem = "Root and the EFI partition must be different partitions."
+        else:
+            problem = None
+        self.custom_hint.set_text(problem or "")
+        self.custom_hint.set_visible(problem is not None)
+        return problem is None
+
+    def refresh_partitions(self):
+        parts = partitions(self.selected_disk())
+        self.part_devices = [p[0] for p in parts]
+        labels = Gtk.StringList()
+        efi_labels = Gtk.StringList()
+        for dev, size, fstype, ptype in parts:
+            text = f"{dev}  ({size})" + (f"  {fstype}" if fstype else "")
+            labels.append(text)
+            efi_labels.append(text)
+        if not parts:
+            labels.append("no partitions found")
+            efi_labels.append("no partitions found")
+        self.part_root.set_model(labels)
+        self.part_efi.set_model(efi_labels)
+        esp = next((i for i, pt in enumerate(parts) if "EFI" in pt[3]), None)
+        if esp is not None:
+            self.part_efi.set_selected(esp)
+        # Default root to something that is not the ESP, so the wizard never
+        # opens with the same partition selected for both.
+        root = next((i for i, pt in enumerate(parts) if i != esp), 0)
+        self.part_root.set_selected(root)
 
     def page_account(self):
         group = Adw.PreferencesGroup(title="Account")
@@ -188,7 +331,7 @@ class Wizard(Adw.ApplicationWindow):
     def page_confirm(self):
         self.summary = Gtk.Label(justify=Gtk.Justification.LEFT, xalign=0,
                                  selectable=True)
-        self.agree = Gtk.CheckButton(label="I understand this erases the disk")
+        self.agree = Gtk.CheckButton(label="I understand and want to continue")
         self.agree.connect("toggled", lambda *_: self.sync_buttons())
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         box.append(self.summary)
@@ -230,23 +373,46 @@ class Wizard(Adw.ApplicationWindow):
         if self.page == "confirm":
             self.next.set_label("Install")
             self.next.set_sensitive(self.agree.get_active())
+        elif self.page == "mode":
+            self.next.set_label("Next")
+            self.refresh_mode_hint()
+            enough = (self.mode != "alongside"
+                      or free_space_gib(self.selected_disk()) >= 25)
+            self.next.set_sensitive(enough)
         else:
             self.next.set_label("Next")
             self.next.set_sensitive(True)
 
+    def skipped(self, name):
+        """The partition picker is only meaningful for custom partitioning."""
+        return name == "custom" and self.mode != "manual"
+
     def on_back(self, *_):
-        self.index = max(0, self.index - 1)
+        while self.index > 0:
+            self.index -= 1
+            if not self.skipped(self.page):
+                break
         self.stack.set_visible_child_name(self.page)
         self.sync_buttons()
 
     def on_next(self, *_):
         if self.page == "disk" and not self.disks:
             return
+        if self.page == "mode":
+            if self.mode == "alongside" and free_space_gib(self.selected_disk()) < 25:
+                return          # hint on the page already explains why
+            if self.mode == "manual":
+                self.refresh_partitions()
+        if self.page == "custom" and not self.validate_custom():
+            return
         if self.page == "account" and not self.validate_account():
             return
         if self.page == "options":
             self.fill_summary()
-        self.index = min(len(self.pages) - 1, self.index + 1)
+        while self.index < len(self.pages) - 1:
+            self.index += 1
+            if not self.skipped(self.page):
+                break
         self.stack.set_visible_child_name(self.page)
         self.sync_buttons()
         if self.page == "install":
@@ -273,7 +439,13 @@ class Wizard(Adw.ApplicationWindow):
 
     def fill_summary(self):
         name, size, model = self.disks[self.disk_row.get_selected()]
+        what = {
+            "alongside": "install alongside, using free space only",
+            "erase": "ERASE the whole disk",
+            "manual": "use the partitions chosen",
+        }[self.mode]
         self.summary.set_markup(
+            f"<b>Action</b>\t{what}\n"
             f"<b>Disk</b>\t{GLib.markup_escape_text(name)}  {size}  "
             f"{GLib.markup_escape_text(model)}\n"
             f"<b>User</b>\t{GLib.markup_escape_text(self.e_user.get_text())}\n"
@@ -284,9 +456,16 @@ class Wizard(Adw.ApplicationWindow):
 
     # --------------------------------------------------------------- install
     def argv(self):
+        if self.mode == "manual":
+            mode_args = ["--root", self.part_devices[self.part_root.get_selected()],
+                         "--efi", self.part_devices[self.part_efi.get_selected()]]
+            if self.fmt_efi.get_active():
+                mode_args.append("--format-efi")
+        else:
+            mode_args = ["--alongside" if self.mode == "alongside" else "--erase"]
         return [
             "sudo", "-n", INSTALLER,
-            "--disk", self.selected_disk(), "--erase",
+            "--disk", self.selected_disk(), *mode_args,
             "--user", self.e_user.get_text().strip(),
             "--hostname", self.e_host.get_text().strip(),
             "--tz", self.tz_list.get_string(self.tz_row.get_selected()),
