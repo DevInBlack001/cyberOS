@@ -4,8 +4,8 @@ A reproducible [archiso](https://wiki.archlinux.org/title/Archiso) profile that 
 **live + installer ISO** for the four-year programme. Everything is pre-installed and themed;
 students boot the USB, try it, and run one command to install it to disk.
 
-Created and maintained by **edbron** ([github.com/edbron](https://github.com/edbron),
-edbron411@gmail.com) for the Cyber Department, University of Mines and Technology, Tarkwa.
+Created and maintained by **edbron** ([github.com/edbron](https://github.com/edbron))
+for the Cyber Department, University of Mines and Technology, Tarkwa.
 
 | Requirement          | What ships                                              |
 |----------------------|---------------------------------------------------------|
@@ -188,8 +188,8 @@ requested automatically.
 ## Author & credits
 
 CyberOS — the archiso profile, installer, theming and build tooling in this repository —
-is the original work of **edbron** (edbron411@gmail.com), for the Cyber Department at
-the University of Mines and Technology, Tarkwa.
+is the original work of **edbron**, for the Cyber Department at the University of Mines
+and Technology, Tarkwa.
 
 It stands on other people's work, which keeps its own authorship:
 
