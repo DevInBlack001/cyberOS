@@ -27,7 +27,7 @@ MODE="${1:-}"
 CFG="${XDG_CONFIG_HOME:-$HOME/.config}"
 STATE="$CFG/cyberos/mode"
 
-current() { [[ -r $STATE ]] && cat "$STATE" || echo light; }
+current() { [[ -r $STATE ]] && cat "$STATE" || echo dark; }
 
 case "$MODE" in
   "")         current; exit 0;;

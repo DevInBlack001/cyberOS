@@ -19,7 +19,7 @@ for the Cyber Department, University of Mines and Technology, Tarkwa.
 | Virtualisation       | VirtualBox (+ dkms host modules), guest utils for VMs   |
 | Networking           | Cisco Packet Tracer (`packettracer`), Wireshark, nmap   |
 | Security lab         | metasploit, ghidra, radare2, burp-free alternatives (sqlmap, nikto, gobuster), john, hashcat, hydra, aircrack-ng, bettercap, impacket, masscan, binwalk, volatility3, sleuthkit, yara, clamav, lynis, docker |
-| Theme                | macOS window UI palette — Red Shimmer `#FF605C`, Coronation Gold `#FFBD44`, Malachite `#00CA4E`, Light Silver `#E1DFE1`, Argent `#C0BFC0`, Tech White `#F5F5F5`. **Light by default, `Super+Shift+T` toggles dark.** Custom wallpaper per mode, Papirus icons, JetBrainsMono Nerd Font |
+| Theme                | macOS window UI palette — Red Shimmer `#FF605C`, Coronation Gold `#FFBD44`, Malachite `#00CA4E`, Light Silver `#E1DFE1`, Argent `#C0BFC0`, Tech White `#F5F5F5`. **Dark by default, `Super+Shift+T` toggles light.** Custom wallpaper per mode, Papirus icons, JetBrainsMono Nerd Font |
 
 Live session: auto-login as **student**, no password (passwordless `sudo`); root also has no password. Real passwords are set by the installer.
 
@@ -120,11 +120,11 @@ you prefer a stock Arch install.
 
 ## Light and dark
 
-CyberOS ships light and switches with one command or `Super+Shift+T`:
+CyberOS ships dark and switches with one command or `Super+Shift+T`:
 
 ```bash
-cyberos-theme            # print the current mode
-cyberos-theme dark
+cyberos-theme            # print the current mode (dark by default)
+cyberos-theme light
 cyberos-theme toggle
 ```
 
