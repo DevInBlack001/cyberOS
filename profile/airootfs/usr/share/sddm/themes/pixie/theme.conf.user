@@ -3,9 +3,9 @@
 # of the screen, which collided with the wordmark on the desktop wallpaper.
 # This variant is the same artwork with the centred CYBER/DEPARTMENT block removed.
 background=/usr/share/backgrounds/cyberos/wallpaper-login.png
-accentColor=#FFCB06
+accentColor=#00CA4E
 autoColor=false
 use24HourClock=true
-backgroundColor=#0B1610
-textColor=#ECF1EE
+backgroundColor=#1D1D1F
+textColor=#F5F5F5
 fontFamily=JetBrainsMono Nerd Font
