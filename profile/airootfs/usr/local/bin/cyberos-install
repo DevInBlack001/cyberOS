@@ -32,6 +32,9 @@ while [[ $# -gt 0 ]]; do
     --efi) EFIP=$2; shift 2;;       --format-efi) FORMAT_EFI=1; shift;;
     --home) HOMEP=$2; shift 2;;     --format-home) FORMAT_HOME=1; shift;;
     --user) USER_=$2; shift 2;;     --password) PASS=$2; shift 2;;
+    # Read passwords from stdin instead of argv, which is world-readable
+    # in /proc: line 1 is the user password, an optional line 2 is root's.
+    --password-stdin) IFS= read -r PASS; IFS= read -r ROOTPASS || true; shift;;
     --root-password) ROOTPASS=$2; shift 2;;
     --tz) TZ_=$2; shift 2;;         --fs) FS=$2; shift 2;;
     --swap) SWAP_GB=$2; shift 2;;   --yes|-y) YES=1; shift;;

@@ -1,23 +1,391 @@
-#!/usr/bin/env bash
-# ============================================================================
-#  cyberos-install-gui — wrapper used by the "Install CyberOS" launcher.
-#
-#  cyberos-install runs under `set -e`, so a failure exits immediately. When
-#  the launcher ran it as `foot -e sudo cyberos-install`, the terminal closed
-#  with the script and the error was never readable. This keeps the window
-#  open and tees everything to a log so a failed install can be diagnosed.
-# ============================================================================
-LOG=/tmp/cyberos-install.log
+#!/usr/bin/env python3
+"""cyberos-install-gui — graphical front-end for cyberos-install.
 
-sudo /usr/local/bin/cyberos-install 2>&1 | tee "$LOG"
-rc=${PIPESTATUS[0]}
+Deliberately does no disk work of its own. It collects answers, then runs
+/usr/local/bin/cyberos-install with its unattended flags and streams the output
+into a log view. All partitioning, formatting, copying and bootloader logic
+stays in that one audited script, so the GUI cannot drift from the CLI.
 
-echo
-if [[ $rc -eq 0 ]]; then
-  printf '\033[1;32m==> Installation finished.\033[0m  Log: %s\n' "$LOG"
-else
-  printf '\033[1;31m==> Installation FAILED (exit %s).\033[0m  Log: %s\n' "$rc" "$LOG"
-  echo "    The error is in the last lines above. To copy it out:  cat $LOG"
-fi
-echo
-read -rp "Press Enter to close this window..." _
+  --dry-run   render and drive the whole wizard without live media and without
+              touching a disk; the install step prints the command instead.
+"""
+import os
+import re
+import shlex
+import subprocess
+import sys
+
+import gi
+
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
+
+INSTALLER = "/usr/local/bin/cyberos-install"
+DRY_RUN = "--dry-run" in sys.argv
+
+
+# zram and loop devices report TYPE=disk to lsblk but are not install targets:
+# zram0 is compressed RAM, and offering it would let someone "install" into
+# memory. Ruled out by name, since there is no type that separates them.
+NOT_A_TARGET = re.compile(r"^/dev/(zram|loop|ram|sr|fd)\d")
+
+
+def live_medium():
+    """The disk the live session booted from — never offer to erase it."""
+    src = subprocess.run(["findmnt", "-no", "SOURCE", "/run/archiso/bootmnt"],
+                         capture_output=True, text=True, check=False).stdout.strip()
+    if not src:
+        return None
+    src = src.split("[")[0]
+    parent = subprocess.run(["lsblk", "-no", "PKNAME", src],
+                            capture_output=True, text=True,
+                            check=False).stdout.strip().splitlines()
+    return f"/dev/{parent[0]}" if parent and parent[0] else src
+
+
+def list_disks():
+    """Whole disks only — no partitions, no zram/loop, not the live medium."""
+    out = subprocess.run(
+        ["lsblk", "-dnpo", "NAME,SIZE,TYPE,MODEL"],
+        capture_output=True, text=True, check=False,
+    ).stdout
+    boot = live_medium()
+    disks = []
+    for line in out.splitlines():
+        parts = line.split(None, 3)
+        if len(parts) < 3 or parts[2] != "disk":
+            continue
+        name, size = parts[0], parts[1]
+        if NOT_A_TARGET.match(name) or name == boot:
+            continue
+        model = parts[3].strip() if len(parts) > 3 else ""
+        disks.append((name, size, model))
+    return disks
+
+
+def timezones():
+    try:
+        out = subprocess.run(["timedatectl", "list-timezones"],
+                             capture_output=True, text=True, check=False).stdout
+        zones = [z for z in out.split() if "/" in z]
+        if zones:
+            return zones
+    except OSError:
+        pass
+    return ["UTC", "Africa/Accra"]
+
+
+class Wizard(Adw.ApplicationWindow):
+    def __init__(self, app):
+        super().__init__(application=app, title="Install CyberOS",
+                         default_width=720, default_height=560)
+        self.disks = list_disks()
+        self.proc = None
+
+        self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.SLIDE_LEFT)
+        self.back = Gtk.Button(label="Back")
+        self.next = Gtk.Button(label="Next", css_classes=["suggested-action"])
+        self.back.connect("clicked", self.on_back)
+        self.next.connect("clicked", self.on_next)
+
+        header = Adw.HeaderBar()
+        header.pack_start(self.back)
+        header.pack_end(self.next)
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.append(header)
+        box.append(self.stack)
+        self.stack.set_vexpand(True)
+        self.set_content(box)
+
+        self.pages = ["welcome", "disk", "account", "options", "confirm", "install", "done"]
+        for name, build in (
+            ("welcome", self.page_welcome), ("disk", self.page_disk),
+            ("account", self.page_account), ("options", self.page_options),
+            ("confirm", self.page_confirm), ("install", self.page_install),
+            ("done", self.page_done),
+        ):
+            self.stack.add_named(build(), name)
+        self.index = 0
+        self.sync_buttons()
+
+    # ---------------------------------------------------------------- pages
+    def _page(self, title, subtitle, child=None):
+        page = Adw.StatusPage(title=title, description=subtitle)
+        if child is not None:
+            page.set_child(child)
+        return page
+
+    def page_welcome(self):
+        msg = ("This will install CyberOS onto a disk in this machine.\n\n"
+               "Everything on the disk you choose will be erased.")
+        if DRY_RUN:
+            msg += "\n\nDRY RUN — nothing will be written."
+        return self._page("Install CyberOS", msg)
+
+    def page_disk(self):
+        self.disk_list = Gtk.StringList()
+        for name, size, model in self.disks:
+            self.disk_list.append(f"{name}   {size}   {model}".rstrip())
+        if not self.disks:
+            self.disk_list.append("no disks found")
+        self.disk_drop = Gtk.DropDown(model=self.disk_list)
+        group = Adw.PreferencesGroup(title="Target disk")
+        row = Adw.ActionRow(title="Install to",
+                            subtitle="The entire disk will be erased")
+        row.add_suffix(self.disk_drop)
+        group.add(row)
+        return self._page("Choose a disk", None, group)
+
+    def page_account(self):
+        group = Adw.PreferencesGroup(title="Account")
+        self.e_user = Adw.EntryRow(title="Username", text="student")
+        self.e_host = Adw.EntryRow(title="Computer name", text="cyberos")
+        self.e_pass = Adw.PasswordEntryRow(title="Password")
+        self.e_pass2 = Adw.PasswordEntryRow(title="Confirm password")
+        for w in (self.e_user, self.e_host, self.e_pass, self.e_pass2):
+            group.add(w)
+        self.account_hint = Gtk.Label(css_classes=["error"], visible=False)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.append(group)
+        box.append(self.account_hint)
+        return self._page("Create your account", None, box)
+
+    def page_options(self):
+        group = Adw.PreferencesGroup(title="Options")
+        self.tz_list = Gtk.StringList()
+        zones = timezones()
+        for z in zones:
+            self.tz_list.append(z)
+        self.tz_row = Adw.ComboRow(title="Time zone", model=self.tz_list)
+        default_tz = "Africa/Accra" if "Africa/Accra" in zones else "UTC"
+        self.tz_row.set_selected(zones.index(default_tz))
+
+        self.fs_list = Gtk.StringList()
+        for f in ("ext4", "btrfs"):
+            self.fs_list.append(f)
+        self.fs_row = Adw.ComboRow(title="Filesystem", model=self.fs_list)
+
+        self.swap = Gtk.SpinButton.new_with_range(0, 64, 1)
+        self.swap.set_value(4)
+        swap_row = Adw.ActionRow(title="Swap file", subtitle="GiB, 0 for none")
+        swap_row.add_suffix(self.swap)
+
+        for w in (self.tz_row, self.fs_row, swap_row):
+            group.add(w)
+        return self._page("Options", None, group)
+
+    def page_confirm(self):
+        self.summary = Gtk.Label(justify=Gtk.Justification.LEFT, xalign=0,
+                                 selectable=True)
+        self.agree = Gtk.CheckButton(label="I understand this erases the disk")
+        self.agree.connect("toggled", lambda *_: self.sync_buttons())
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        box.append(self.summary)
+        box.append(self.agree)
+        return self._page("Ready to install", None, box)
+
+    def page_install(self):
+        self.log = Gtk.TextView(editable=False, monospace=True,
+                                wrap_mode=Gtk.WrapMode.WORD_CHAR)
+        scroll = Gtk.ScrolledWindow(vexpand=True, hexpand=True, child=self.log)
+        self.progress = Gtk.ProgressBar(show_text=True, text="Preparing…")
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.append(self.progress)
+        box.append(scroll)
+        box.set_margin_top(12); box.set_margin_bottom(12)
+        box.set_margin_start(12); box.set_margin_end(12)
+        return box
+
+    def page_done(self):
+        self.done_page = self._page("Installation complete",
+                                    "Remove the USB stick after the machine "
+                                    "has shut down, then start it again.")
+        reboot = Gtk.Button(label="Restart now",
+                            css_classes=["suggested-action", "pill"],
+                            halign=Gtk.Align.CENTER)
+        reboot.connect("clicked", lambda *_: subprocess.Popen(
+            ["sudo", "-n", "systemctl", "reboot"]))
+        self.done_page.set_child(reboot)
+        return self.done_page
+
+    # ------------------------------------------------------------ navigation
+    @property
+    def page(self):
+        return self.pages[self.index]
+
+    def sync_buttons(self):
+        self.back.set_visible(self.page not in ("welcome", "install", "done"))
+        self.next.set_visible(self.page not in ("install", "done"))
+        if self.page == "confirm":
+            self.next.set_label("Install")
+            self.next.set_sensitive(self.agree.get_active())
+        else:
+            self.next.set_label("Next")
+            self.next.set_sensitive(True)
+
+    def on_back(self, *_):
+        self.index = max(0, self.index - 1)
+        self.stack.set_visible_child_name(self.page)
+        self.sync_buttons()
+
+    def on_next(self, *_):
+        if self.page == "disk" and not self.disks:
+            return
+        if self.page == "account" and not self.validate_account():
+            return
+        if self.page == "options":
+            self.fill_summary()
+        self.index = min(len(self.pages) - 1, self.index + 1)
+        self.stack.set_visible_child_name(self.page)
+        self.sync_buttons()
+        if self.page == "install":
+            self.start_install()
+
+    def validate_account(self):
+        user = self.e_user.get_text().strip()
+        pw, pw2 = self.e_pass.get_text(), self.e_pass2.get_text()
+        problem = None
+        if not re.fullmatch(r"[a-z_][a-z0-9_-]*", user):
+            problem = "Username must be lowercase letters, digits, - or _"
+        elif not pw:
+            problem = "Password cannot be empty"
+        elif pw != pw2:
+            problem = "Passwords do not match"
+        elif not self.e_host.get_text().strip():
+            problem = "Computer name cannot be empty"
+        self.account_hint.set_text(problem or "")
+        self.account_hint.set_visible(problem is not None)
+        return problem is None
+
+    def selected_disk(self):
+        return self.disks[self.disk_drop.get_selected()][0]
+
+    def fill_summary(self):
+        name, size, model = self.disks[self.disk_drop.get_selected()]
+        self.summary.set_markup(
+            f"<b>Disk</b>\t{GLib.markup_escape_text(name)}  {size}  "
+            f"{GLib.markup_escape_text(model)}\n"
+            f"<b>User</b>\t{GLib.markup_escape_text(self.e_user.get_text())}\n"
+            f"<b>Name</b>\t{GLib.markup_escape_text(self.e_host.get_text())}\n"
+            f"<b>Zone</b>\t{self.tz_list.get_string(self.tz_row.get_selected())}\n"
+            f"<b>Disk format</b>\t{self.fs_list.get_string(self.fs_row.get_selected())}"
+            f", {int(self.swap.get_value())} GiB swap")
+
+    # --------------------------------------------------------------- install
+    def argv(self):
+        return [
+            "sudo", "-n", INSTALLER,
+            "--disk", self.selected_disk(), "--erase",
+            "--user", self.e_user.get_text().strip(),
+            "--hostname", self.e_host.get_text().strip(),
+            "--tz", self.tz_list.get_string(self.tz_row.get_selected()),
+            "--fs", self.fs_list.get_string(self.fs_row.get_selected()),
+            "--swap", str(int(self.swap.get_value())),
+            "--password-stdin", "--yes",
+        ]
+
+    def append(self, text):
+        buf = self.log.get_buffer()
+        buf.insert(buf.get_end_iter(), text)
+        self.log.scroll_to_mark(buf.create_mark(None, buf.get_end_iter(), False),
+                                0, False, 0, 0)
+
+    def start_install(self):
+        self.progress.set_text("Installing…")
+        self.progress.pulse()
+        GLib.timeout_add(200, self.pulse)
+
+        if DRY_RUN:
+            self.append("DRY RUN — would run:\n\n" +
+                        " ".join(shlex.quote(a) for a in self.argv()) +
+                        "\n\n(password supplied on stdin, not on the command line)\n")
+            self.finish(0)
+            return
+
+        launcher = Gio.SubprocessLauncher.new(
+            Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE |
+            Gio.SubprocessFlags.STDIN_PIPE)
+        try:
+            self.proc = launcher.spawnv(self.argv())
+        except GLib.Error as exc:
+            self.append(f"Failed to start the installer: {exc.message}\n")
+            self.finish(1)
+            return
+
+        stdin = self.proc.get_stdin_pipe()
+        stdin.write_all((self.e_pass.get_text() + "\n").encode(), None)
+        stdin.close(None)
+
+        stream = Gio.DataInputStream.new(self.proc.get_stdout_pipe())
+        self.read_line(stream)
+        self.proc.wait_async(None, self.on_exit)
+
+    def read_line(self, stream):
+        stream.read_line_async(GLib.PRIORITY_DEFAULT, None, self.on_line, stream)
+
+    def on_line(self, stream, res, _data):
+        try:
+            line, _ = stream.read_line_finish(res)
+        except GLib.Error:
+            return
+        if line is None:
+            return
+        self.append(line.decode(errors="replace") + "\n")
+        self.read_line(stream)
+
+    def on_exit(self, proc, res):
+        try:
+            proc.wait_finish(res)
+            code = proc.get_exit_status()
+        except GLib.Error:
+            code = 1
+        self.finish(code)
+
+    def pulse(self):
+        if self.page == "install" and self.progress.get_text() == "Installing…":
+            self.progress.pulse()
+            return True
+        return False
+
+    def finish(self, code):
+        if code == 0:
+            self.progress.set_fraction(1.0)
+            self.progress.set_text("Done")
+            self.index = self.pages.index("done")
+            self.stack.set_visible_child_name(self.page)
+            self.sync_buttons()
+        else:
+            self.progress.set_fraction(1.0)
+            self.progress.set_text(f"Failed (exit {code})")
+            self.append(f"\nInstallation FAILED with exit code {code}.\n"
+                        "The error is in the output above.\n")
+            self.back.set_visible(True)
+            self.back.set_label("Close")
+            self.back.connect("clicked", lambda *_: self.close())
+
+
+class App(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id="gh.edbron.cyberos.Installer")
+
+    def do_activate(self):
+        Wizard(self).present()
+
+
+def main():
+    if not DRY_RUN and not os.path.isdir("/run/archiso"):
+        # Same guard the CLI installer uses; without it this would offer to
+        # erase a disk on an already-installed machine.
+        dialog = Gtk.AlertDialog(
+            message="CyberOS is already installed",
+            detail="The installer only runs from the CyberOS live USB.")
+        app = Gtk.Application(application_id="gh.edbron.cyberos.Installer")
+        app.connect("activate", lambda a: dialog.show(None))
+        sys.exit(app.run([]))
+    sys.exit(App().run([]))
+
+
+if __name__ == "__main__":
+    main()

@@ -70,6 +70,11 @@ traceroute
 net-tools
 whois
 
+# ---- graphical installer (cyberos-install-gui) ----
+python-gobject
+gtk4
+libadwaita
+
 # ---- firewall ----
 ufw
 

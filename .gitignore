@@ -3,3 +3,4 @@ out/
 repo/
 profile/pacman.conf
 aur/*.deb
+dist/
