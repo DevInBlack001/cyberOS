@@ -140,16 +140,16 @@ you prefer a stock Arch install.
   DEBUG line, `[cfg] Lua config not found, using legacy config at …` — so the port is
   not needed yet. If a release drops legacy parsing, port
   `etc/skel/.config/hypr/hyprland.conf` — see https://wiki.hypr.land/Configuring/.
-* A **firewall (`ufw`) is enabled by default**, deny-inbound / allow-outbound, on
-  both the live session and installed systems. Outbound work (nmap, browsing,
-  client-side exploits) is unaffected, but anything that **listens** — a
-  Metasploit handler, a bind shell, a local web server — needs its port opened
-  first:
+* **`ufw` is installed but not enabled.** A default-deny inbound policy would
+  silently break the exercises this ISO is for — Metasploit handlers, bind
+  shells and local servers all listen — so labs work out of the box. Turn it on
+  when the exercise is about firewalls:
 
   ```bash
-  sudo ufw allow 4444/tcp     # open
-  sudo ufw status verbose     # check
-  sudo ufw delete allow 4444/tcp
+  sudo ufw enable                  # deny inbound, allow outbound
+  sudo systemctl enable ufw        # persist across reboots
+  sudo ufw allow 4444/tcp          # open a port for a listener
+  sudo ufw status verbose
   ```
 
 * SSH is installed but **not enabled**. The live image ships root and student
