@@ -559,6 +559,9 @@ class App(Adw.Application):
         super().__init__(application_id="gh.edbron.cyberos.Installer")
 
     def do_activate(self):
+        # libadwaita defaults to light unless a desktop portal says otherwise.
+        # CyberOS is dark, and a white wizard over it looks like a foreign app.
+        Adw.StyleManager.get_default().set_color_scheme(Adw.ColorScheme.PREFER_DARK)
         Wizard(self).present()
 
 
