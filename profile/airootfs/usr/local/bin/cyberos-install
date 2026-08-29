@@ -11,6 +11,8 @@
 #
 #  Unattended, erase:      sudo cyberos-install --disk /dev/nvme0n1 --erase --hostname lab-07 \
 #                              --user student --password 'S3cret!' --tz Africa/Accra --yes
+#  Unattended, alongside:  sudo cyberos-install --disk /dev/sda --alongside --password ... --yes
+#                          (uses existing free space; keeps other OSes and their ESP)
 #  Unattended, manual:     sudo cyberos-install --disk /dev/sda --root /dev/sda5 --efi /dev/sda1 \
 #                              [--format-efi] [--home /dev/sda6 [--format-home]] --password ... --yes
 #  Other options:          --root-password P  --fs ext4|btrfs  --swap <GiB|0>
@@ -28,10 +30,14 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --disk) DISK=$2; shift 2;;      --hostname) HOSTNAME_=$2; shift 2;;
     --erase) MODE=erase; shift;;    --manual) MODE=manual; shift;;
+    --alongside) MODE=alongside; shift;;
     --root) ROOTP=$2; MODE=manual; shift 2;;
     --efi) EFIP=$2; shift 2;;       --format-efi) FORMAT_EFI=1; shift;;
     --home) HOMEP=$2; shift 2;;     --format-home) FORMAT_HOME=1; shift;;
     --user) USER_=$2; shift 2;;     --password) PASS=$2; shift 2;;
+    # Read passwords from stdin instead of argv, which is world-readable
+    # in /proc: line 1 is the user password, an optional line 2 is root's.
+    --password-stdin) IFS= read -r PASS; IFS= read -r ROOTPASS || true; shift;;
     --root-password) ROOTPASS=$2; shift 2;;
     --tz) TZ_=$2; shift 2;;         --fs) FS=$2; shift 2;;
     --swap) SWAP_GB=$2; shift 2;;   --yes|-y) YES=1; shift;;
@@ -93,6 +99,44 @@ if [[ $MODE == manual && $YES -eq 0 ]]; then
     read -rp "Format $HOMEP? (n keeps existing data) [y/N]: " x; [[ $x =~ ^[Yy] ]] && FORMAT_HOME=1
   fi
 fi
+# ---------------------------------------------------------------- alongside
+# Install into existing free space next to another OS. Nothing already on the
+# disk is touched: no partition is deleted, moved or resized. The only write to
+# the partition table is one new entry in a gap that is already free.
+if [[ $MODE == alongside ]]; then
+  MIN_GIB=25
+  command -v sgdisk >/dev/null || die "sgdisk not found"
+  [[ $(blkid -o value -s PTTYPE "$DISK") == gpt ]] ||
+    die "installing alongside needs a GPT disk; $DISK is not GPT"
+
+  # sgdisk -F/-E give the first and last aligned sector of the LARGEST free block.
+  FREE_START=$(sgdisk -F "$DISK") || die "cannot read free space on $DISK"
+  FREE_END=$(sgdisk -E "$DISK")   || die "cannot read free space on $DISK"
+  FREE_GIB=$(( (FREE_END - FREE_START + 1) * 512 / 1024 / 1024 / 1024 ))
+  echo "Largest free block on $DISK: ${FREE_GIB} GiB"
+  [[ $FREE_GIB -ge $MIN_GIB ]] || die "need at least ${MIN_GIB} GiB of unallocated space, found ${FREE_GIB} GiB.
+Shrink an existing partition first — from Windows use Disk Management, from
+Linux use gparted — then run the installer again."
+
+  if [[ $UEFI -eq 1 ]]; then
+    # Reuse the other OS's EFI System Partition; formatting it would destroy
+    # that OS's bootloader.
+    EFIP=$(lsblk -pnro NAME,PARTTYPE "$DISK" | awk '$2=="c12a7328-f81f-11d2-ba4b-00a0c93ec93b"{print $1; exit}')
+    [[ -n $EFIP ]] || die "no EFI System Partition found on $DISK; cannot install alongside on UEFI"
+    FORMAT_EFI=0
+    echo "Reusing existing EFI System Partition $EFIP (will not be formatted)"
+  fi
+
+  before=$(lsblk -pnro NAME "$DISK" | tail -n +2 | sort)
+  sgdisk -n 0:0:0 -t 0:8304 -c 0:CyberOS "$DISK" >/dev/null || die "failed to create the new partition"
+  partprobe "$DISK" 2>/dev/null || true; udevadm settle; sleep 1
+  after=$(lsblk -pnro NAME "$DISK" | tail -n +2 | sort)
+  ROOTP=$(comm -13 <(echo "$before") <(echo "$after") | head -1)
+  [[ -b ${ROOTP:-/nonexistent} ]] || die "could not identify the partition just created"
+  echo "Created $ROOTP for /"
+  MODE=manual                      # the rest of the install is the manual path
+fi
+
 if [[ $MODE == manual ]]; then
   [[ -b ${ROOTP:-/nonexistent} ]] || die "--root <partition> is required for manual mode"
   [[ $UEFI -eq 0 || -b ${EFIP:-/nonexistent} ]] || die "--efi <partition> is required on UEFI systems"

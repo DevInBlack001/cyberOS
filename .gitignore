@@ -3,3 +3,6 @@ out/
 repo/
 profile/pacman.conf
 aur/*.deb
+dist/
+__pycache__/
+*.pyc

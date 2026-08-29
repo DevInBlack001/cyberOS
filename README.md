@@ -64,6 +64,12 @@ Write to USB: `sudo dd if=out/cyberos-*.iso of=/dev/sdX bs=4M status=progress of
 
 ## Installing on a student machine
 
+Clicking **Install CyberOS** opens a graphical wizard: pick a disk, create the
+account, confirm, watch it run. It is a front-end only — every disk operation is
+still performed by `cyberos-install`, so the GUI and the CLI cannot drift apart.
+`cyberos-install-gui --dry-run` clicks through the whole wizard without live media
+and without touching a disk.
+
 Boot the USB (UEFI or legacy BIOS both work), log in, open a terminal (`Super+Enter`) and:
 
 ```bash
