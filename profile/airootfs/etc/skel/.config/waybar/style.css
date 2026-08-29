@@ -153,6 +153,7 @@ tooltip {
 #custom-notification-silencing-indicator,
 #idle_inhibitor,
 #custom-screenrecording-indicator,
+#custom-power,
 #custom-updatespacman {
   min-width: 14px;
   margin: 1px 3px 1px 3px;
@@ -326,4 +327,10 @@ tooltip label {
 #custom-install {
   color: #FFCB06;
   padding: 0px 8px;
+}
+
+/* --- CyberOS: power menu button --- */
+#custom-power {
+  color: #FFCB06;
+  padding: 0px 6px;
 }

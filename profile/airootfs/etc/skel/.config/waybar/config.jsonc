@@ -46,7 +46,8 @@
     "cpu",
     "battery",
     "custom/weather",
-    "clock"
+    "clock",
+    "custom/power"
   ],
   "hyprland/workspaces": {
     "on-click": "activate",
@@ -71,6 +72,15 @@
       "5": []
     }
   },
+  // CyberOS: power menu (lock / log out / reboot / shut down). The battery
+  // module opens it too, but battery is hidden on desktops, so this is the
+  // dependable way to reach shutdown.
+  "custom/power": {
+    "format": "",
+    "on-click": "~/.config/rofi/powermenu.sh",
+    "tooltip-format": "Power menu"
+  },
+
   "custom/install": {
     "exec": "test -d /run/archiso && echo '  Install CyberOS' || true",
     "interval": "once",
