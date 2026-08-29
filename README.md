@@ -133,6 +133,8 @@ you prefer a stock Arch install.
   so builds are slower than a plain archiso.
 * Packet Tracer's PKGBUILD pins a checksum; `build.sh` re-computes it for the `.deb` you supply.
 * Hyprland ≥ 0.56 prefers a Lua config (`hyprland.lua`) but still loads the classic
-  `hyprland.conf` shipped here. If a future release drops legacy parsing, port
+  `hyprland.conf` shipped here. 0.56.2 emits no deprecation warning for it — only a
+  DEBUG line, `[cfg] Lua config not found, using legacy config at …` — so the port is
+  not needed yet. If a release drops legacy parsing, port
   `etc/skel/.config/hypr/hyprland.conf` — see https://wiki.hypr.land/Configuring/.
 * Secure Boot is not supported by archiso out of the box — disable it in firmware or enrol keys.
