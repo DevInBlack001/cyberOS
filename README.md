@@ -140,6 +140,21 @@ you prefer a stock Arch install.
   DEBUG line, `[cfg] Lua config not found, using legacy config at …` — so the port is
   not needed yet. If a release drops legacy parsing, port
   `etc/skel/.config/hypr/hyprland.conf` — see https://wiki.hypr.land/Configuring/.
+* A **firewall (`ufw`) is enabled by default**, deny-inbound / allow-outbound, on
+  both the live session and installed systems. Outbound work (nmap, browsing,
+  client-side exploits) is unaffected, but anything that **listens** — a
+  Metasploit handler, a bind shell, a local web server — needs its port opened
+  first:
+
+  ```bash
+  sudo ufw allow 4444/tcp     # open
+  sudo ufw status verbose     # check
+  sudo ufw delete allow 4444/tcp
+  ```
+
+* SSH is installed but **not enabled**. The live image ships root and student
+  with empty passwords, so `20-cyberos-hardening.conf` sets `PermitRootLogin no`
+  and `PermitEmptyPasswords no`; installed systems inherit it.
 * Secure Boot is not supported by archiso out of the box — disable it in firmware or enrol keys.
 
 ## Contributing

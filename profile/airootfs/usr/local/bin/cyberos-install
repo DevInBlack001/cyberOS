@@ -194,7 +194,6 @@ rsync -aHAXx --info=progress2 --no-inc-recursive \
   --exclude=/etc/systemd/system/suspend-then-hibernate.target \
   --exclude=/etc/systemd/resolved.conf.d/archiso.conf \
   --exclude=/etc/systemd/system-generators/systemd-gpt-auto-generator \
-  --exclude=/etc/ssh/sshd_config.d/10-archiso.conf \
   --exclude=/etc/pacman.d/hooks/zzzz99-remove-custom-hooks-from-airootfs.hook \
   --exclude=/etc/motd \
   --exclude=/root/customize_airootfs.sh \

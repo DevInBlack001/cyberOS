@@ -70,6 +70,9 @@ traceroute
 net-tools
 whois
 
+# ---- firewall ----
+ufw
+
 # ---- graphics / wayland stack ----
 mesa
 vulkan-intel

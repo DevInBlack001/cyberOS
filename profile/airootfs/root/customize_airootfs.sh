@@ -46,6 +46,14 @@ usermod -aG wireshark student || true
 sed -i -E 's@^#(Server = https://(fastly|geo)\.mirror\.pkgbuild\.com/.*)@\1@' /etc/pacman.d/mirrorlist
 grep -q '^Server' /etc/pacman.d/mirrorlist || { echo 'no mirrors enabled in /etc/pacman.d/mirrorlist' >&2; exit 1; }
 
+# Firewall: default-deny inbound, allow outbound. Set ENABLED here rather than
+# running `ufw enable`, which tries to load rules into a kernel this chroot does
+# not own. Lab exercises that need an inbound port open one explicitly, e.g.
+#   sudo ufw allow 4444/tcp
+sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf
+grep -q '^ENABLED=yes' /etc/ufw/ufw.conf || { echo 'failed to enable ufw' >&2; exit 1; }
+systemctl enable ufw.service >/dev/null 2>&1
+
 # keep the live image lean (the empty sync dir stays, or pacman warns on every call)
 rm -rf /var/cache/pacman/pkg/* /var/lib/pacman/sync/* /root/.cache /home/student/.cache
 mkdir -p /var/lib/pacman/sync
