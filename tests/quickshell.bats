@@ -175,3 +175,9 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   # keeps its login-time palette and the live re-theme contract is dead.
   grep -q 'onFileChanged: reload()' "$QS/Theme.qml"
 }
+
+@test "the stray About Xfce entry from libxfce4ui is hidden" {
+  f="$ROOT/profile/airootfs/etc/skel/.local/share/applications/xfce4-about.desktop"
+  [ -f "$f" ]
+  grep -q '^NoDisplay=true' "$f"
+}
