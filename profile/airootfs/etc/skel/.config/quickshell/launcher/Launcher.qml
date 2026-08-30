@@ -39,9 +39,16 @@ PanelWindow {
             .filter(a => !a.noDisplay && (q === "" || a.name.toLowerCase().includes(q)))
             .sort((a, b) => a.name.localeCompare(b.name));
     }
+    // Re-select the first result whenever the filtered set changes (every
+    // keystroke) -- matches rofi (typing always re-highlights the top hit).
+    onFilteredChanged: grid.currentIndex = filtered.length > 0 ? 0 : -1
 
+    // No highlighted entry (empty filter results) is a no-op, not a close --
+    // matches rofi: Return with nothing matched does nothing, it doesn't
+    // dismiss the launcher.
     function launch(entry) {
-        if (entry) entry.execute();
+        if (!entry) return;
+        entry.execute();
         root.closeRequested();
     }
 
@@ -114,9 +121,41 @@ PanelWindow {
                 clip: true
                 cellWidth: width / root.columns
                 cellHeight: 96
-                model: root.filtered
                 currentIndex: 0
-                onModelChanged: currentIndex = 0
+
+                // A plain JS array bound straight to `model:` is treated as
+                // a brand-new model on every reassignment -- QQmlDelegateModel
+                // has no way to tell "same list, some entries added/removed"
+                // from "unrelated new list", so it destroys and recreates
+                // every delegate (all IconImages included) on every
+                // keystroke. Measured before this fix: opening the launcher
+                // and typing two characters ("f" then "fi") produced ~1250
+                // delegate creations/destructions total, including repeat
+                // churn for apps present in *both* filter results -- a real
+                // flicker/lag risk under the spec's safe-graphics (software
+                // rendering) constraint.
+                //
+                // ScriptModel (Quickshell core) exists precisely for this:
+                // it wraps a JS array as a real QAbstractListModel and diffs
+                // old vs new `values` to emit minimal insert/remove/move
+                // signals instead of a full reset. `comparisonMode:
+                // ObjectComparison.Identity` (set explicitly here, matching
+                // the default) diffs by object identity, which is correct
+                // for DesktopEntry: entries are stable QObjects owned by the
+                // DesktopEntries singleton, never recreated between
+                // keystrokes -- so an app present in both the old and new
+                // filtered set is recognised as the *same* row and its
+                // delegate (and its IconImage) is kept alive, not rebuilt.
+                // Verified at runtime with temporary onCompleted/
+                // onDestruction counters on the delegate: the same two
+                // keystrokes after this fix produced zero destroy/recreate
+                // churn for entries unaffected by the filter change (see
+                // task-6-report.md's fix-report addendum for the exact
+                // before/after counts).
+                model: ScriptModel {
+                    values: root.filtered
+                    comparisonMode: ObjectComparison.Identity
+                }
 
                 delegate: Item {
                     id: cell
@@ -139,7 +178,13 @@ PanelWindow {
                             IconImage {
                                 Layout.alignment: Qt.AlignHCenter
                                 implicitSize: 40
-                                source: Quickshell.iconPath(cell.modelData.icon)
+                                // Two-arg fallback overload: an entry whose
+                                // `icon` doesn't resolve in the icon theme
+                                // (host-app-index dependent, e.g. some
+                                // packages ship a broken Icon= key) gets a
+                                // generic placeholder instead of Image
+                                // logging a "could not load icon" warning.
+                                source: Quickshell.iconPath(cell.modelData.icon, "application-x-executable")
                             }
                             Text {
                                 Layout.fillWidth: true
