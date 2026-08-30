@@ -94,7 +94,17 @@ if [[ $SKIP_AUR -eq 0 ]]; then
     d="$WORK/aur/$pkg"
     if [[ -f $ROOT/aur/$pkg/PKGBUILD ]]; then
       mkdir -p "$d"; cp -f "$ROOT/aur/$pkg"/* "$d/"          # local PKGBUILD
-    elif [[ -d $d/.git ]]; then git -C "$d" pull -q; else git clone -q "https://aur.archlinux.org/$pkg.git" "$d"; fi
+    elif [[ -d $d/.git ]]; then
+      # makepkg rewrites pkgver= in a VCS PKGBUILD, which leaves the clone dirty,
+      # and `git pull` then refuses -- on a rebase-by-default config it refuses
+      # outright. This clone is a disposable build cache, so take upstream's copy
+      # rather than trying to merge into it. Untracked src/ and pkg/ are left
+      # alone so makepkg can reuse them.
+      git -C "$d" fetch -q origin
+      git -C "$d" reset --hard -q FETCH_HEAD
+    else
+      git clone -q "https://aur.archlinux.org/$pkg.git" "$d"
+    fi
     if [[ $pkg == packettracer ]]; then
       deb=$(ls "$ROOT"/aur/CiscoPacketTracer_*_Ubuntu_64bit.deb 2>/dev/null | head -1 || true)
       [[ -n $deb ]] || die "Packet Tracer: put CiscoPacketTracer_*_Ubuntu_64bit.deb from https://www.netacad.com into $ROOT/aur/"

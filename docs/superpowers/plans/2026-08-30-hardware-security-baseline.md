@@ -19,7 +19,7 @@
 - Every executable under `profile/airootfs/` MUST be in `profile/profiledef.sh` `file_permissions` — `mkarchiso` copies with `cp -af --no-preserve=ownership,mode`.
 - **`linux-hardened` MUST NOT become the default kernel.** Its ptrace and BPF restrictions break `gdb`, Ghidra and Metasploit, which are the point of the image.
 - **Docker stays.** The course needs it. The mitigation is the firewall, and not putting students in the `docker` group by default.
-- `sudo ./build.sh` and `sudo ./test-vm.sh` must be run by a person; `sudo` cannot take a password from an agent session.
+- `./build.sh` and `./test-vm.sh` are run as a **normal user**, not with sudo — build.sh refuses to run as root and calls sudo itself. Both must be run by a person; `sudo` cannot take a password from an agent session.
 
 ## File Structure
 
@@ -1233,7 +1233,8 @@ gh pr create --base main --title "Security baseline: firewall, signatures, LUKS2
 
 ## Notes for the executor
 
-- **`sudo ./build.sh` and `sudo ./test-vm.sh` cannot be run from an agent session.** Ask the
+- **`./build.sh` and `./test-vm.sh` are run as a normal user, not with sudo,** and cannot be
+  run from an agent session. Ask the
   user to run them and to say when they finish; watch `work/build.log` meanwhile.
 - **Give foot more than three seconds to appear before typing into it.** Keystrokes sent to a
   window that has not finished starting go nowhere, and the resulting silence has already
