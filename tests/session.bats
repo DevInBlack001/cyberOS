@@ -30,3 +30,10 @@ setup() {
   [[ "$output" == *"WLR_RENDERER_ALLOW_SOFTWARE=1"* ]]
   [[ "$output" == *"LIBGL_ALWAYS_SOFTWARE=1"* ]]
 }
+
+@test "the session execs start-hyprland, not Hyprland directly" {
+  # exec Hyprland directly makes it print a "started without start-hyprland"
+  # warning banner on every login. Seen on build 15 on real hardware.
+  grep -q 'exec /usr/bin/start-hyprland' "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-session"
+  ! grep -qE '^\s*exec Hyprland' "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-session"
+}

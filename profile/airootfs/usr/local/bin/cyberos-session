@@ -36,5 +36,8 @@ if [[ ${BASH_SOURCE[0]} == "${0}" ]]; then
   while IFS= read -r line; do
     [[ -n $line ]] && export "${line?}"
   done < <(session_env "$cmdline")
-  exec Hyprland "$@"
+  # start-hyprland is what the stock session file runs; exec-ing Hyprland
+  # directly makes it print a "started without start-hyprland" warning banner
+  # on every login.
+  exec /usr/bin/start-hyprland "$@"
 fi
