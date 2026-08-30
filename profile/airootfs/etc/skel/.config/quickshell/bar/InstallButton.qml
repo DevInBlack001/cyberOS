@@ -15,8 +15,10 @@ BarModule {
         onExited: exitCode => installBtn.isLiveIso = (exitCode === 0)
     }
 
-    label: "\uf019 Install CyberOS"
+    icon: "\uf019"
+    label: "Install CyberOS"
     iconColor: Cyber.Theme.accent2
+    labelColor: Cyber.Theme.accent2
 
     onClicked: Quickshell.execDetached(["gtk-launch", "cyberos-install"])
 }

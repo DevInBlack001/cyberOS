@@ -21,6 +21,7 @@ RowLayout {
         Repeater {
             model: SystemTray.items
             Item {
+                id: trayIcon
                 required property var modelData
                 width: 20; height: 20
 
@@ -31,15 +32,18 @@ RowLayout {
                 QsMenuAnchor {
                     id: menuAnchor
                     menu: modelData.menu
+                    anchor.item: trayIcon
                 }
                 MouseArea {
                     anchors.fill: parent
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
                     onClicked: mouse => {
-                        if (mouse.button === Qt.RightButton && modelData.hasMenu)
-                            menuAnchor.open();
-                        else
+                        if (mouse.button === Qt.RightButton) {
+                            if (modelData.hasMenu) menuAnchor.open();
+                            // no menu -- right-click does nothing
+                        } else {
                             modelData.activate();
+                        }
                     }
                 }
             }

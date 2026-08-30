@@ -6,6 +6,7 @@ Rectangle {
     property string icon: ""
     property string label: ""
     property color iconColor: Cyber.Theme.fg
+    property color labelColor: Cyber.Theme.fg
     property string tooltip: ""
     signal clicked(int button)
     signal scrolled(int delta)
@@ -23,7 +24,7 @@ Rectangle {
                color: chip.iconColor
                font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize } }
         Text { text: chip.label; visible: chip.label !== ""
-               color: Cyber.Theme.fg
+               color: chip.labelColor
                font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize } }
     }
     MouseArea {
