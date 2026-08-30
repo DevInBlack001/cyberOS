@@ -6,3 +6,4 @@ aur/*.deb
 dist/
 __pycache__/
 *.pyc
+profile/packages.x86_64

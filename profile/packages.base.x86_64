@@ -91,8 +91,20 @@ intel-media-driver
 xorg-xwayland
 qt5-wayland
 qt6-wayland
-# for NVIDIA labs uncomment (adds dkms build time to the ISO build):
-#nvidia-open-dkms
+
+# Drivers for hardware students actually own, not just what QEMU presents.
+# nvidia-open supports Turing (GTX 16xx / RTX 20xx) and newer only; older cards
+# fall back to nouveau and are Tier 3 in docs/SPEC.md.
+nvidia-open-dkms
+# Broadcom wireless is common on the older Dell and Apple laptops students bring
+# and is not covered by linux-firmware.
+broadcom-wl-dkms
+# Several Tier 2 laptop failures are firmware bugs with an LVFS fix.
+fwupd
+# CyberOS has no Microsoft-signed shim and cannot claim Secure Boot support, but
+# sbctl lets a lab enrol its own keys rather than leaving those machines
+# unbootable. docs/SPEC.md S5.
+sbctl
 
 # ---- Hyprland desktop ----
 hyprland
@@ -168,8 +180,6 @@ gnome-text-editor
 gnome-disk-utility
 
 # ---- virtualization ----
-virtualbox
-virtualbox-host-dkms
 virtualbox-guest-utils
 qemu-guest-agent
 open-vm-tools
@@ -204,38 +214,14 @@ lsof
 socat
 openbsd-netcat
 
-# ---- security lab toolset ----
-john
-hashcat
-hydra
-aircrack-ng
-sqlmap
-nikto
-gobuster
-binwalk
-radare2
-ghidra
-metasploit
-exploitdb
-hashcat-utils
-masscan
-arp-scan
-bettercap
-impacket
-python-scapy
-smbclient
-nbtscan
-sslscan
-testssl.sh
-foremost
-perl-image-exiftool
-sleuthkit
-volatility3
-yara
+# ---- security baseline (present in every edition) ----
+# Not the lab toolset: these are what docs/SPEC.md §7 requires on every machine.
+arch-audit
 clamav
 lynis
 docker
 docker-compose
+
 # ---- from the local [cyberos] repo (AUR + local PKGBUILDs, built by build.sh) ----
 pixie-sddm-git
 visual-studio-code-bin
