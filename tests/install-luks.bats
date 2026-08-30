@@ -30,11 +30,36 @@ setup() {
   [[ "$output" == *"block"* ]]
 }
 
-@test "the kernel command line names the LUKS device and the mapper" {
-  run luks_cmdline "dead-beef" "cryptroot"
+@test "busybox initrd: cryptdevice= on the kernel command line" {
+  run luks_cmdline "dead-beef" "cryptroot" "base udev keyboard block encrypt filesystems"
   [ "$status" -eq 0 ]
   [[ "$output" == *"cryptdevice=UUID=dead-beef:cryptroot"* ]]
   [[ "$output" == *"root=/dev/mapper/cryptroot"* ]]
+}
+
+# mkinitcpio 41 ships HOOKS=(base systemd ...). A systemd initrd ignores the
+# busybox encrypt hook entirely -- build 14 timed out waiting for the mapper and
+# dropped to emergency mode. The stock line, verbatim:
+SYSD="base systemd autodetect microcode modconf kms keyboard sd-vconsole block filesystems fsck"
+
+@test "systemd initrd: sd-encrypt is used, not encrypt" {
+  run luks_hooks "$SYSD"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"block sd-encrypt filesystems"* ]]
+  ! [[ "$output" == *" encrypt "* ]]
+}
+
+@test "systemd initrd: rd.luks.name= on the kernel command line, not cryptdevice=" {
+  run luks_cmdline "dead-beef" "cryptroot" "$SYSD"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"rd.luks.name=dead-beef=cryptroot"* ]]
+  [[ "$output" == *"root=/dev/mapper/cryptroot"* ]]
+  ! [[ "$output" == *"cryptdevice"* ]]
+}
+
+@test "an existing sd-encrypt hook is not duplicated" {
+  run luks_hooks "base systemd keyboard block sd-encrypt filesystems"
+  [ "$(grep -o 'sd-encrypt' <<<"$output" | wc -l)" -eq 1 ]
 }
 
 @test "luks_cmdline refuses an empty UUID" {
@@ -48,10 +73,10 @@ setup() {
 }
 
 @test "recovery entries use the mapper, not a bare UUID, on an encrypted root" {
-  frag=$(luks_cmdline "dead-beef" cryptroot)
+  frag=$(luks_cmdline "dead-beef" cryptroot "$SYSD")
   run grub_safe_entries "1111-2222" "$frag"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"cryptdevice=UUID=dead-beef:cryptroot"* ]]
+  [[ "$output" == *"rd.luks.name=dead-beef=cryptroot"* ]]
   ! [[ "$output" == *"root=UUID=1111-2222"* ]]
 }
 

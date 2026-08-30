@@ -136,34 +136,53 @@ assert_no_sshd_in_live() {
   return 0
 }
 
-# luks_hooks <hooks-line> -- insert the encrypt hook in the only place it works.
+# initramfs_flavour <hooks-line> -- "systemd" or "busybox".
 #
-# encrypt must run after block (which provides the device) and before filesystems
-# (which mounts it). keyboard must already be present, or a student on a non-US
-# layout cannot type the passphrase -- and an encrypted disk nobody can unlock has
-# no recovery path at all, so that case refuses rather than guesses.
+# mkinitcpio 41 ships HOOKS=(base systemd ...) by default. A systemd initramfs
+# never runs the busybox `encrypt` hook, so inserting it there produces an
+# initrd that boots, times out waiting for /dev/mapper/cryptroot, and drops to
+# an emergency shell with root locked. Seen on build 14. The hook AND the kernel
+# parameters both depend on which family is in use.
+initramfs_flavour() {
+  if grep -qw systemd <<<"$1"; then echo systemd; else echo busybox; fi
+}
+
+# luks_hooks <hooks-line> -- insert the unlock hook in the only place it works.
+#
+# It must run after block (which provides the device) and before filesystems
+# (which mounts it). A keyboard hook must already be present, or a student on a
+# non-US layout cannot type the passphrase -- and an encrypted disk nobody can
+# unlock has no recovery path at all, so that case refuses rather than guesses.
 luks_hooks() {
-  local hooks=$1
+  local hooks=$1 hook
+  hook=$([[ $(initramfs_flavour "$hooks") == systemd ]] && echo sd-encrypt || echo encrypt)
   if ! grep -qw keyboard <<<"$hooks"; then
     printf 'HOOKS has no keyboard hook; refusing to encrypt a disk whose passphrase could not be typed\n' >&2
     return 1
   fi
-  if grep -qw encrypt <<<"$hooks"; then
+  if grep -qwE 'encrypt|sd-encrypt' <<<"$hooks"; then
     printf '%s\n' "$hooks"
     return 0
   fi
   if ! grep -qw block <<<"$hooks"; then
-    printf 'HOOKS has no block hook; cannot place encrypt\n' >&2
+    printf 'HOOKS has no block hook; cannot place %s\n' "$hook" >&2
     return 1
   fi
-  printf '%s\n' "${hooks/block/block encrypt}"
+  printf '%s\n' "${hooks/block/block $hook}"
 }
 
-# luks_cmdline <luks-uuid> <mapper-name> -- the GRUB_CMDLINE_LINUX fragment.
+# luks_cmdline <luks-uuid> <mapper-name> <hooks-line> -- the kernel parameters.
+#
+# systemd's initrd reads rd.luks.name=; the busybox encrypt hook reads
+# cryptdevice=. Neither understands the other's spelling.
 luks_cmdline() {
-  local uuid=$1 mapper=${2:-cryptroot}
+  local uuid=$1 mapper=${2:-cryptroot} hooks=${3:-}
   [[ -n $uuid ]] || { printf 'luks_cmdline: no LUKS UUID\n' >&2; return 1; }
-  printf 'cryptdevice=UUID=%s:%s root=/dev/mapper/%s\n' "$uuid" "$mapper" "$mapper"
+  if [[ $(initramfs_flavour "$hooks") == systemd ]]; then
+    printf 'rd.luks.name=%s=%s root=/dev/mapper/%s\n' "$uuid" "$mapper" "$mapper"
+  else
+    printf 'cryptdevice=UUID=%s:%s root=/dev/mapper/%s\n' "$uuid" "$mapper" "$mapper"
+  fi
 }
 
 # Everything below this point touches disks. Stop here when sourced for tests.
@@ -475,7 +494,7 @@ if [[ $ENCRYPT -eq 1 ]]; then
   CUR=$(sed -nE 's/^HOOKS=\((.*)\)$/\1/p' /mnt/etc/mkinitcpio.conf)
   NEW=$(luks_hooks "$CUR") || die "cannot place the encrypt hook in mkinitcpio.conf"
   sed -i -E "s|^HOOKS=\(.*\)$|HOOKS=($NEW)|" /mnt/etc/mkinitcpio.conf
-  FRAG=$(luks_cmdline "$LUKS_UUID" cryptroot) || die "cannot build the LUKS kernel command line"
+  FRAG=$(luks_cmdline "$LUKS_UUID" cryptroot "$NEW") || die "cannot build the LUKS kernel command line"
   sed -i -E "s|^GRUB_CMDLINE_LINUX=\"(.*)\"$|GRUB_CMDLINE_LINUX=\"\\1 $FRAG\"|" /mnt/etc/default/grub
   # There is no separate /boot, so GRUB itself has to unlock the container before
   # it can read the kernel. Without this an encrypted install does not boot at all.
@@ -491,7 +510,7 @@ fi
 ROOT_UUID=$(blkid -o value -s UUID "$ROOTP")
 if [[ -n $ROOT_UUID ]]; then
   SAFE_ROOT=""
-  [[ $ENCRYPT -eq 1 ]] && SAFE_ROOT=$(luks_cmdline "$LUKS_UUID" cryptroot)
+  [[ $ENCRYPT -eq 1 ]] && SAFE_ROOT=$(luks_cmdline "$LUKS_UUID" cryptroot "$(sed -nE 's/^HOOKS=\((.*)\)$/\1/p' /mnt/etc/mkinitcpio.conf)")
   grub_safe_entries "$ROOT_UUID" "$SAFE_ROOT" > /mnt/etc/grub.d/40_custom
   chmod 755 /mnt/etc/grub.d/40_custom
 else
