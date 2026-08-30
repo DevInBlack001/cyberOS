@@ -18,7 +18,6 @@ hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
 
 ---------------------------------------------------------------- programs
 local terminal = "foot"
-local menu     = "rofi -show drun"
 local browser  = "firefox"
 local files    = "thunar"
 local editor   = "code"
@@ -108,7 +107,7 @@ hl.animation({ leaf = "workspaces", enabled = true, speed = 5, bezier = "ease" }
 local mod = "SUPER"
 
 hl.bind(mod .. " + Return", hl.dsp.exec_cmd(terminal))
-hl.bind(mod .. " + D",      hl.dsp.exec_cmd(menu))
+hl.bind(mod .. " + D",      hl.dsp.exec_cmd("qs ipc call launcher toggle"))
 hl.bind(mod .. " + I",      hl.dsp.exec_cmd("gtk-launch cyberos-install"))
 hl.bind(mod .. " + Tab",    hl.dsp.exec_cmd("rofi -show window"))
 hl.bind(mod .. " + period", hl.dsp.exec_cmd("rofi -show emoji"))
@@ -170,6 +169,7 @@ hl.window_rule({ name = "float-pip",  match = { title = "^(Picture-in-Picture)$"
 hl.window_rule({ name = "float-vbox", match = { class = "^(VirtualBox Machine)$" }, float = true })
 hl.window_rule({ name = "suppress-maximize", match = { class = ".*" }, suppress_event = "maximize" })
 
--- blur the floating bar and the launcher
+-- blur the floating bar and the remaining rofi menus (window/emoji/calc/clipboard --
+-- drun is gone, replaced by the quickshell launcher)
 hl.layer_rule({ match = { namespace = "waybar" }, blur = true, ignore_alpha = 0.3 })
 hl.layer_rule({ match = { namespace = "rofi" },   blur = true })

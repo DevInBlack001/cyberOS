@@ -90,3 +90,28 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   grep -q 'Pipewire.defaultAudioSink' "$QS/shell.qml"
   grep -q 'brightnessctl' "$QS/shell.qml"
 }
+
+@test "launcher is DesktopEntries-driven and bound to Super+D" {
+  grep -q 'DesktopEntries' "$QS/launcher/Launcher.qml"
+  grep -q '"launcher"' "$QS/shell.qml"
+  grep -q 'qs ipc call launcher toggle' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
+  ! grep -q 'rofi -show drun' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
+  grep -q 'rofi -show window' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"  # rofi stays for the rest
+}
+
+@test "launcher: centred focusable panel, GridView + filter, noDisplay excluded" {
+  grep -q 'PanelWindow' "$QS/launcher/Launcher.qml"
+  grep -q 'focusable: true' "$QS/launcher/Launcher.qml"
+  grep -q 'GridView' "$QS/launcher/Launcher.qml"
+  grep -q 'noDisplay' "$QS/launcher/Launcher.qml"
+  grep -q 'execute()' "$QS/launcher/Launcher.qml"
+  grep -q 'closeRequested' "$QS/launcher/Launcher.qml"
+}
+
+@test "bar: apps chip is the first left module, toggles the launcher" {
+  grep -q 'launcher.activeAsync = true' "$QS/bar/Bar.qml"
+  grep -q 'tooltip: "Applications"' "$QS/bar/Bar.qml"
+  # must precede InstallButton -- first module in the left RowLayout
+  awk '/RowLayout {/{f=1} f && /Applications|InstallButton/{print; if (/InstallButton/) exit}' "$QS/bar/Bar.qml" \
+    | head -1 | grep -q 'Applications'
+}

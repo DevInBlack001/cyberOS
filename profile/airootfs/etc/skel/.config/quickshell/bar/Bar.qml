@@ -21,6 +21,7 @@ PanelWindow {
         RowLayout {                       // left
             anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 10 }
             spacing: 6
+            BarModule { icon: "\uf00a"; tooltip: "Applications"; onClicked: launcher.activeAsync = true }
             InstallButton {}
             Workspaces {}
             Media {}

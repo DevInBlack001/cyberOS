@@ -6,6 +6,7 @@ import Quickshell.Services.Pipewire
 import "." as Cyber
 import "bar" as Bar
 import "power" as Power
+import "launcher" as Launcher
 import "osd" as Osd
 
 ShellRoot {
@@ -20,7 +21,10 @@ ShellRoot {
         id: powerMenu
         Power.PowerMenu { onCloseRequested: powerMenu.active = false }
     }
-    LazyLoader { id: launcher; }
+    LazyLoader {
+        id: launcher
+        Launcher.Launcher { onCloseRequested: launcher.active = false }
+    }
     LazyLoader { id: osd; Osd.Osd {} }
 
     // `qs ipc call power toggle` opens the menu if closed, closes it if open.
@@ -28,6 +32,14 @@ ShellRoot {
         target: "power"
         function toggle(): void {
             powerMenu.activeAsync ? powerMenu.active = false : powerMenu.activeAsync = true
+        }
+    }
+
+    // `qs ipc call launcher toggle` -- replaces `rofi -show drun`.
+    IpcHandler {
+        target: "launcher"
+        function toggle(): void {
+            launcher.activeAsync ? launcher.active = false : launcher.activeAsync = true
         }
     }
 

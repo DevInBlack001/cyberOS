@@ -81,3 +81,13 @@ run_config() { lua -e "dofile('$STUB'); dofile('$HYPR/hyprland.lua'); report()";
   [[ "$output" == *"bindcmd XF86MonBrightnessDown :: qs ipc call osd brightnessDown"* ]]
   ! grep -q swayosd <<<"$output"
 }
+
+@test "Super+D opens the quickshell launcher; the other rofi binds survive" {
+  run run_config
+  [[ "$output" == *"bindcmd SUPER + D :: qs ipc call launcher toggle"* ]]
+  ! grep -q 'bindcmd SUPER + D :: rofi' <<<"$output"
+  [[ "$output" == *"bindcmd SUPER + Tab :: rofi -show window"* ]]
+  [[ "$output" == *"bindcmd SUPER + period :: rofi -show emoji"* ]]
+  [[ "$output" == *"bindcmd SUPER + equal :: rofi -show calc -no-show-match -no-sort"* ]]
+  [[ "$output" == *"bindcmd SUPER + X :: cliphist list | rofi -dmenu -p clipboard | cliphist decode | wl-copy"* ]]
+}
