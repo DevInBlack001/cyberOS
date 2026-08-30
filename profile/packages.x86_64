@@ -3,6 +3,11 @@ base
 base-devel
 linux
 linux-headers
+# A second kernel to fall back to. A driver regression in the newest kernel is the
+# commonest cause of "it worked last month", and without this the only recovery a
+# student has is a reinstall.
+linux-lts
+linux-lts-headers
 linux-firmware
 amd-ucode
 intel-ucode
