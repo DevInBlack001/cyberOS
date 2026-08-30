@@ -52,3 +52,9 @@ setup() {
   grep -qE '^PermitRootLogin +no'      "$conf"
   grep -qE '^PermitEmptyPasswords +no' "$conf"
 }
+
+@test "first boot never resets ufw (it deletes the shipped rules under a starting service)" {
+  ! grep -qE '^\s*ufw (--force )?reset' "$ROOT/profile/airootfs/usr/local/bin/cyberos-firstboot"
+  run firewall_rules
+  ! [[ "$output" == *"reset"* ]]
+}

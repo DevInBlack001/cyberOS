@@ -10,7 +10,9 @@ done < /etc/passwd
 # Firewall: default-deny incoming. Applied here rather than in the installer's
 # chroot, because ufw needs a running kernel to load its rules. docs/SPEC.md S1.
 if command -v ufw >/dev/null && [[ ! -e /etc/cyberos/firewall-applied ]]; then
-  ufw --force reset          >/dev/null 2>&1 || true
+  # No `ufw reset` here: on a fresh install there is nothing to reset, and reset
+  # moves the shipped rule files aside -- ufw.service, starting concurrently on
+  # first boot, then found no before.rules and failed. Seen on build 15.
   ufw default deny incoming  >/dev/null 2>&1 || true
   ufw default allow outgoing >/dev/null 2>&1 || true
   ufw --force enable         >/dev/null 2>&1 || true

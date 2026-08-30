@@ -114,7 +114,6 @@ ENTRIES
 # listening service opens that port deliberately.
 firewall_rules() {
   cat <<'RULES'
-ufw --force reset
 ufw default deny incoming
 ufw default allow outgoing
 ufw --force enable
