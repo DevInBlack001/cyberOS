@@ -429,6 +429,12 @@ mkinitcpio -P
 
 # bootloader: ALWAYS install both BIOS and UEFI GRUB so the disk boots whatever the firmware mode
 sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="CyberOS"/' /etc/default/grub
+# GRUB sorts kernel filenames in reverse, and vmlinuz-linux-lts sorts after
+# vmlinuz-linux, so without this the LTS fallback becomes the DEFAULT entry --
+# the opposite of why it ships. Pin the main kernel explicitly.
+grep -q '^GRUB_TOP_LEVEL=' /etc/default/grub \
+  && sed -i 's|^GRUB_TOP_LEVEL=.*|GRUB_TOP_LEVEL=/boot/vmlinuz-linux|' /etc/default/grub \
+  || echo 'GRUB_TOP_LEVEL=/boot/vmlinuz-linux' >> /etc/default/grub
 sed -i 's/^#\?GRUB_DISABLE_OS_PROBER=.*/GRUB_DISABLE_OS_PROBER=false/' /etc/default/grub
 grub-install --target=i386-pc --recheck "$DISK" || echo "WARNING: BIOS grub-install failed (fine on UEFI-only machines)"
 if mountpoint -q /boot/efi; then

@@ -62,3 +62,11 @@ setup() {
   [[ "$output" == *"SOURCED-OK"* ]]
   ! [[ "$output" == *"Firmware mode"* ]]
 }
+
+@test "the installer pins the default GRUB entry to the main kernel, not the LTS fallback" {
+  # GRUB sorts kernel names in reverse, and vmlinuz-linux-lts sorts after
+  # vmlinuz-linux, so shipping a fallback kernel silently made it the default.
+  # Seen on build 14: a fresh install booted 6.18-lts instead of 7.1.
+  run grep -c 'GRUB_TOP_LEVEL=/boot/vmlinuz-linux' "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-install"
+  [ "$output" -ge 1 ]
+}
