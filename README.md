@@ -10,7 +10,7 @@ for the Cyber Department, University of Mines and Technology, Tarkwa.
 | Requirement          | What ships                                              |
 |----------------------|---------------------------------------------------------|
 | Base OS              | Arch Linux (rolling)                                    |
-| Tiling WM            | Hyprland + waybar, rofi, mako, swaybg, hyprlock, hypridle       |
+| Tiling WM            | Hyprland + Quickshell (QML shell: bar, launcher, OSD, power menu), rofi, mako, swaybg, hyprlock, hypridle |
 | Display manager      | SDDM with the **Pixie** theme (`pixie-sddm-git`)        |
 | Editors              | Neovim (themed config), VS Code (Microsoft build)       |
 | Terminal             | foot + tmux (Ctrl-a prefix)                             |
@@ -37,7 +37,7 @@ cyberos/
     ├── packages.x86_64   # EVERYTHING installed on the image (edit this to add/remove software)
     ├── pacman.conf.in    # build-time pacman.conf (local [cyberos] repo)
     └── airootfs/         # files overlaid onto the root filesystem
-        ├── etc/skel/.config/{hypr,waybar,foot,tmux,nvim,wofi,mako,...}   ← the theme
+        ├── etc/skel/.config/{hypr,quickshell,foot,tmux,nvim,wofi,mako,...}   ← the theme
         ├── etc/sddm.conf.d/           # Pixie theme, live autologin
         ├── etc/{passwd,shadow,group}  # live users
         ├── root/customize_airootfs.sh # runs in the chroot during the build
@@ -106,7 +106,8 @@ you prefer a stock Arch install.
 
 * **Add/remove software** → `profile/packages.x86_64` (official repos) or `aur/packages.txt` (AUR).
 * **Theme/keybinds** → `profile/airootfs/etc/skel/.config/…`. Colours live in
-  `hypr/theme.conf`, `waybar/style.css`, `foot/foot.ini`, `nvim/lua/cyber.lua`.
+  `hypr/theme.lua`, `quickshell/theme.json` (consumed by `Theme.qml`), `foot/foot.ini`,
+  `nvim/lua/cyber.lua`.
 * **Wallpaper** → replace `airootfs/usr/share/backgrounds/cyberos/wallpaper.png` (also used by
   the SDDM greeter and the lock screen).
 * **Name/version** → `profile/profiledef.sh`, `airootfs/etc/os-release`.
@@ -129,10 +130,12 @@ cyberos-theme toggle
 ```
 
 The palette lives in `cyberos-theme` alone, which generates the colours for
-Hyprland, waybar, rofi, foot, mako, tmux and Neovim, sets the GTK/libadwaita
-colour scheme, and swaps the wallpaper. There is one source of truth, so the
-applications cannot drift apart. Already-open terminals keep their colours;
-new ones pick the new palette up.
+Hyprland, the Quickshell bar/launcher/OSD/power menu, rofi, foot, mako, tmux
+and Neovim, sets the GTK/libadwaita colour scheme, and swaps the wallpaper.
+There is one source of truth, so the applications cannot drift apart.
+Already-open terminals keep their colours; new ones pick the new palette up.
+The shell (Quickshell) re-themes live — no restart needed — because
+`Theme.qml` watches `quickshell/theme.json` for changes.
 
 Two notes on the palette. It is six colours — three accents and three near
 whites — with no dark tone, so light mode adds a readable text colour
@@ -194,7 +197,7 @@ Name the branch for the area it touches:
 | Prefix | Area | Paths |
 |--------|------|-------|
 | `installer/` | install, repair, first boot | `profile/airootfs/usr/local/bin/cyberos-*` |
-| `theme/` | Hyprland, waybar, rofi, foot, SDDM, wallpapers | `etc/skel/.config/`, `usr/share/sddm/`, `usr/share/backgrounds/`, `assets/` |
+| `theme/` | Hyprland, Quickshell, rofi, foot, SDDM, wallpapers | `etc/skel/.config/`, `usr/share/sddm/`, `usr/share/backgrounds/`, `assets/` |
 | `packages/` | what ships in the ISO | `profile/packages.x86_64`, `aur/` |
 | `build/` | build and test tooling | `build.sh`, `test-vm.sh`, `profiledef.sh`, `pacman.conf.in` |
 | `docs/` | documentation | `README.md` |
@@ -240,7 +243,9 @@ It stands on other people's work, which keeps its own authorship:
 * [Arch Linux](https://archlinux.org) and [archiso](https://wiki.archlinux.org/title/Archiso)
 * [Hyprland](https://hypr.land) and the wider hypr ecosystem (hyprlock, hypridle)
 * **Pixie** SDDM theme — xCaptaiN09 (`pixie-sddm-git`)
-* waybar theme — [HANCORE-linux/waybar-themes](https://github.com/HANCORE-linux/waybar-themes)
-  V2.3, adapted here for CyberOS
+* Historical: the earlier waybar theme was adapted from
+  [HANCORE-linux/waybar-themes](https://github.com/HANCORE-linux/waybar-themes) V2.3;
+  the shell is now Quickshell (QML), but the palette it carried lives on in
+  `cyberos-theme` and `theme.json`
 * The UMaT brand palette belongs to the University of Mines and Technology.
 

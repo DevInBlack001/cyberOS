@@ -115,12 +115,11 @@ hyprpolkitagent
 xdg-desktop-portal-hyprland
 xdg-desktop-portal-gtk
 xdg-user-dirs
-waybar
+quickshell
 rofi
 rofi-emoji
 rofi-calc
 mako
-swayosd
 grim
 slurp
 wl-clipboard

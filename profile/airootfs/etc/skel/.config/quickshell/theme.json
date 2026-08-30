@@ -1,0 +1,5 @@
+{
+  "mode": "dark", "bg": "#1D1D1F", "surface": "#2B2B2D", "fg": "#F5F5F5",
+  "muted": "#C0BFC0", "accent": "#00CA4E", "accent2": "#FFBD44",
+  "alert": "#FF605C", "border": "#3A3A3C", "sel": "#3A3A3C", "barAlpha": 0.88
+}

@@ -271,7 +271,7 @@ Apps and plugins are **both** pacman packages. There is no second packaging syst
 | | Apps | Plugins |
 |---|---|---|
 | Naming | upstream name | `cyberos-plugin-<name>` |
-| Examples | a CTF toolkit, a course IDE | a waybar module, an nvim colourscheme, a rofi menu, a lab exercise pack |
+| Examples | a CTF toolkit, a course IDE | a bar widget, an nvim colourscheme, a rofi menu, a lab exercise pack |
 | Repo | `[cyberos-apps]` | `[cyberos-apps]` |
 | Catalogue | AppStream `component/desktop-application` | AppStream `component/addon` |
 

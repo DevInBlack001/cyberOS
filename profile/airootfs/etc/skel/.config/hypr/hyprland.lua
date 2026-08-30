@@ -18,7 +18,6 @@ hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
 
 ---------------------------------------------------------------- programs
 local terminal = "foot"
-local menu     = "rofi -show drun"
 local browser  = "firefox"
 local files    = "thunar"
 local editor   = "code"
@@ -26,10 +25,9 @@ local editor   = "code"
 ---------------------------------------------------------------- autostart
 hl.on("hyprland.start", function()
   hl.exec_cmd("swaybg -i /usr/share/backgrounds/cyberos/wallpaper.png -m fill")
-  hl.exec_cmd("waybar")
+  hl.exec_cmd("qs")
   hl.exec_cmd("mako")
   hl.exec_cmd("hypridle")
-  hl.exec_cmd("swayosd-server")
   hl.exec_cmd("systemctl --user start hyprpolkitagent")
   hl.exec_cmd("nm-applet --indicator")
   hl.exec_cmd("blueman-applet")
@@ -109,7 +107,7 @@ hl.animation({ leaf = "workspaces", enabled = true, speed = 5, bezier = "ease" }
 local mod = "SUPER"
 
 hl.bind(mod .. " + Return", hl.dsp.exec_cmd(terminal))
-hl.bind(mod .. " + D",      hl.dsp.exec_cmd(menu))
+hl.bind(mod .. " + D",      hl.dsp.exec_cmd("qs ipc call launcher toggle"))
 hl.bind(mod .. " + I",      hl.dsp.exec_cmd("gtk-launch cyberos-install"))
 hl.bind(mod .. " + Tab",    hl.dsp.exec_cmd("rofi -show window"))
 hl.bind(mod .. " + period", hl.dsp.exec_cmd("rofi -show emoji"))
@@ -153,11 +151,12 @@ hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true })
 hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
 -- media / brightness (locked: work on the lock screen; repeating: hold to keep going)
-hl.bind("XF86AudioRaiseVolume",  hl.dsp.exec_cmd("swayosd-client --output-volume raise"), { locked = true, repeating = true })
-hl.bind("XF86AudioLowerVolume",  hl.dsp.exec_cmd("swayosd-client --output-volume lower"), { locked = true, repeating = true })
-hl.bind("XF86AudioMute",         hl.dsp.exec_cmd("swayosd-client --output-volume mute-toggle"), { locked = true })
-hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd("swayosd-client --brightness raise"), { locked = true, repeating = true })
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("swayosd-client --brightness lower"), { locked = true, repeating = true })
+-- swayosd is gone -- these dispatch into the Quickshell OSD's ipc target.
+hl.bind("XF86AudioRaiseVolume",  hl.dsp.exec_cmd("qs ipc call osd volumeUp"), { locked = true, repeating = true })
+hl.bind("XF86AudioLowerVolume",  hl.dsp.exec_cmd("qs ipc call osd volumeDown"), { locked = true, repeating = true })
+hl.bind("XF86AudioMute",         hl.dsp.exec_cmd("qs ipc call osd volumeMute"), { locked = true })
+hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd("qs ipc call osd brightnessUp"), { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("qs ipc call osd brightnessDown"), { locked = true, repeating = true })
 hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"),       { locked = true })
 hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
@@ -170,6 +169,8 @@ hl.window_rule({ name = "float-pip",  match = { title = "^(Picture-in-Picture)$"
 hl.window_rule({ name = "float-vbox", match = { class = "^(VirtualBox Machine)$" }, float = true })
 hl.window_rule({ name = "suppress-maximize", match = { class = ".*" }, suppress_event = "maximize" })
 
--- blur the floating bar and the launcher
-hl.layer_rule({ match = { namespace = "waybar" }, blur = true, ignore_alpha = 0.3 })
-hl.layer_rule({ match = { namespace = "rofi" },   blur = true })
+-- blur the floating bar/launcher/OSD/power-menu (all Quickshell surfaces share
+-- the "quickshell" layer namespace) and the remaining rofi menus
+-- (window/emoji/calc/clipboard -- drun is gone, replaced by the quickshell launcher)
+hl.layer_rule({ match = { namespace = "quickshell" }, blur = true, ignore_alpha = 0.3 })
+hl.layer_rule({ match = { namespace = "rofi" },       blur = true })
