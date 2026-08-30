@@ -31,6 +31,7 @@ PanelWindow {
             id: right
             anchors { right: parent.right; verticalCenter: parent.verticalCenter; rightMargin: 10 }
             spacing: 6
+            WidgetHost {}
             Tray {}
             BluetoothChip {}
             Audio {}

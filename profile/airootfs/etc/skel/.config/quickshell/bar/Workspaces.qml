@@ -5,7 +5,7 @@ import ".." as Cyber
 
 RowLayout {
     spacing: 2
-    // waybar parity: workspaces 1-5 always shown (persistent), higher ones only when they exist
+    // workspaces 1-5 always shown (persistent), higher ones only when they exist
     Repeater {
         model: 10
         Rectangle {

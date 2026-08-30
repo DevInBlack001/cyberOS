@@ -37,7 +37,7 @@ run_config() { lua -e "dofile('$STUB'); dofile('$HYPR/hyprland.lua'); report()";
 
 @test "autostart launches the bar, notifications and idle daemon" {
   run run_config
-  [[ "$output" == *"exec waybar"* ]]
+  [[ "$output" == *"exec qs"* ]]
   [[ "$output" == *"exec mako"* ]]
   [[ "$output" == *"exec hypridle"* ]]
 }

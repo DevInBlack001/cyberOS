@@ -7,7 +7,7 @@ BarModule {
     property bool showDate: false
     iconColor: Cyber.Theme.accent
     SystemClock { id: sys; precision: SystemClock.Minutes }
-    // waybar parity: "\uf017 HH:MM ddd", click flips to full date
+    // "\uf017 HH:MM ddd", click flips to full date
     label: "\uf017 " + Qt.formatDateTime(sys.date, showDate ? "HH:mm yyyy-MM-dd" : "HH:mm ddd")
     onClicked: showDate = !showDate
 }

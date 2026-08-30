@@ -115,3 +115,21 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   awk '/RowLayout {/{f=1} f && /Applications|InstallButton/{print; if (/InstallButton/) exit}' "$QS/bar/Bar.qml" \
     | head -1 | grep -q 'Applications'
 }
+
+@test "widget host isolates failures and loads alphabetically" {
+  grep -q 'FolderListModel\|folder' "$QS/bar/WidgetHost.qml"
+  grep -qE 'Loader' "$QS/bar/WidgetHost.qml"
+  [ -f "$QS/widgets/00-example-uptime.qml" ]
+  [ -f "$QS/widgets/README.md" ]
+}
+
+@test "waybar and swayosd are fully gone; quickshell ships" {
+  [ ! -d "$ROOT/profile/airootfs/etc/skel/.config/waybar" ]
+  ! grep -qE '^(waybar|swayosd)$' "$ROOT/profile/airootfs/usr/local/bin/../../../packages.x86_64" 2>/dev/null || true
+  ! grep -qE '^waybar$' "$ROOT/profile/packages.x86_64"
+  ! grep -qE '^swayosd$' "$ROOT/profile/packages.x86_64"
+  grep -qE '^quickshell$' "$ROOT/profile/packages.x86_64"
+  grep -q 'exec_cmd("qs")' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
+  ! grep -q 'waybar' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
+  ! grep -q 'waybar' "$ROOT/profile/airootfs/usr/local/bin/cyberos-theme"
+}
