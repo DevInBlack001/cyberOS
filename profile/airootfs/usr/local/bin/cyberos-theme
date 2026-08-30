@@ -137,8 +137,13 @@ lines=10000
 style=beam
 blink=yes
 T
-  foot_colors colors-light "$WHITE" 1D1D1F 6E6E73 "$SILVER" 1.0
-  foot_colors colors-dark  1D1D1F "$WHITE" "$ARGENT" 3A3A3C 0.92
+  # Both sections get the ACTIVE palette on purpose. foot picks between
+  # colors-light and colors-dark using the desktop appearance portal, and with
+  # no portal running it silently defaults to dark — which showed up as a dark
+  # terminal in light mode. Writing the same colours to both makes the choice
+  # irrelevant, while still avoiding the deprecated bare [colors].
+  foot_colors colors-light "$BG" "$FG" "$MUTED" "$SEL" "$TERM_ALPHA"
+  foot_colors colors-dark  "$BG" "$FG" "$MUTED" "$SEL" "$TERM_ALPHA"
 } > "$CFG/foot/foot.ini"
 
 cat > "$CFG/mako/config" <<T
