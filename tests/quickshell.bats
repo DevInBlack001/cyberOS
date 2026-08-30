@@ -14,7 +14,10 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
 }
 
 @test "no hex colours outside Theme.qml" {
-  run grep -rlE '"#[0-9A-Fa-f]{6}' "$QS" --include='*.qml'
+  # Catches #RGB, #ARGB, #RRGGBB, #AARRGGBB in either quote style -- not just
+  # the 6-digit double-quoted form (a single-quoted or shorthand hex literal
+  # slipped past this test before it was tightened).
+  run grep -rlE "['\"]#[0-9A-Fa-f]{3,8}" "$QS" --include='*.qml'
   [ "$output" = "$QS/Theme.qml" ] || [ -z "$output" ]
 }
 
