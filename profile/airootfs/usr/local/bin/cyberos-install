@@ -100,6 +100,35 @@ menuentry 'CyberOS (LTS kernel, safe graphics)' --class cyberos {
 ENTRIES
 }
 
+# firewall_rules -- the posture an installed CyberOS machine boots with.
+#
+# A machine running Metasploit, Docker and a packet capture on a campus network
+# needs default-deny. Nothing is opened by default: a student who needs a
+# listening service opens that port deliberately.
+firewall_rules() {
+  cat <<'RULES'
+ufw --force reset
+ufw default deny incoming
+ufw default allow outgoing
+ufw --force enable
+RULES
+}
+
+# assert_no_sshd_in_live <airootfs-dir> -- regression guard.
+#
+# The live user has no password. archiso's own drop-in shipped PermitRootLogin
+# yes and PasswordAuthentication yes; ours replaces it, but the real protection
+# is that sshd never starts in the live session at all.
+assert_no_sshd_in_live() {
+  local root=$1 hits
+  hits=$(find "$root/etc/systemd/system" -name 'sshd*' 2>/dev/null || true)
+  if [[ -n $hits ]]; then
+    printf 'sshd is enabled in the live image:\n%s\n' "$hits" >&2
+    return 1
+  fi
+  return 0
+}
+
 # Everything below this point touches disks. Stop here when sourced for tests.
 if [[ -n ${CYBEROS_INSTALL_LIB_ONLY:-} ]]; then
   return 0 2>/dev/null || exit 0
