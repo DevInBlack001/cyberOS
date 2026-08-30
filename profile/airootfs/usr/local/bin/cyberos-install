@@ -538,7 +538,7 @@ rm -rf /etc/mkinitcpio.conf.d/archiso.conf /etc/sddm.conf.d/zz-live-autologin.co
 # so drop it along with its menu entry and keybind.
 rm -f /usr/share/applications/cyberos-install.desktop \
       /usr/local/bin/cyberos-install /usr/local/bin/cyberos-install-gui
-sed -i '/gtk-launch cyberos-install/d' /etc/skel/.config/hypr/hyprland.conf /home/*/.config/hypr/hyprland.conf 2>/dev/null || true
+sed -i '/gtk-launch cyberos-install/d' /etc/skel/.config/hypr/hyprland.lua /home/*/.config/hypr/hyprland.lua 2>/dev/null || true
 systemctl enable NetworkManager sddm bluetooth cyberos-firstboot >/dev/null 2>&1
 systemctl disable ModemManager >/dev/null 2>&1 || true
 

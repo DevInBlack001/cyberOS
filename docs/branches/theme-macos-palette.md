@@ -62,8 +62,11 @@ including a terminal opened *after* the toggle.
 
 ## Follow-up work
 
-- **Port `hyprland.conf` to the Lua config format.** Hyprland 0.56.2 prints a warning banner
-  on every login — *"You are using the .conf config format, support for which will be
-  removed in Hyprland 0.57"* — seen on build 15 on real hardware. This is not cosmetic: when
-  0.57 lands via the `stable` channel the desktop stops starting. `cyberos-theme` generates
-  `hypr/theme.conf`, so the generator must move with it. Owner: `theme/`.
+- ~~Port `hyprland.conf` to the Lua config format.~~ **Done** (`theme/lua-config`).
+  `hyprland.lua` loads its palette from a generated `theme.lua` with a hardcoded fallback so
+  a missing file degrades instead of tripping emergency mode; `theme.conf` is still
+  generated because `hyprlock` speaks hyprlang. The `.conf` was deleted, not kept alongside,
+  so the two formats cannot drift. Tested by executing the config against a stub `hl` and
+  asserting the binds, autostarts and palette it registers (`tests/hyprland-lua.bats`), and
+  verified in a running session on the build-15 install: 69 binds registered, the border
+  colour arriving from `theme.lua`, and the deprecation banner gone.
