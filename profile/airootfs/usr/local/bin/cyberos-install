@@ -16,6 +16,8 @@
 #  Unattended, manual:     sudo cyberos-install --disk /dev/sda --root /dev/sda5 --efi /dev/sda1 \
 #                              [--format-efi] [--home /dev/sda6 [--format-home]] --password ... --yes
 #  Other options:          --root-password P  --fs ext4|btrfs  --swap <GiB|0>
+#                          --encrypt   LUKS2 full-disk encryption on the root partition
+#                                      (passphrase = line 3 of --password-stdin)
 # ============================================================================
 
 # Sourcing this file with CYBEROS_INSTALL_LIB_ONLY=1 defines the helpers without
@@ -28,6 +30,7 @@ fi
 
 DISK="" MODE="" ROOTP="" EFIP="" HOMEP="" FORMAT_EFI=0 FORMAT_HOME=0
 HOSTNAME_="cyberos" USER_="student" PASS="" ROOTPASS="" TZ_="UTC" FS="ext4" YES=0 SWAP_GB=4
+ENCRYPT=0 LUKSPASS="" LUKS_UUID=""
 
 usage() { sed -n '3,17p' "$0"; exit 1; }
 die()   { echo "ERROR: $*" >&2; exit 1; }
@@ -72,8 +75,12 @@ restore_kernel() {
 # GRUB's generated entries cannot carry an extra kernel argument, so the recovery
 # entries are written explicitly with the root UUID the installer already knows.
 grub_safe_entries() {
-  local uuid=$1
+  local uuid=$1 extra=${2:-} root="root=UUID=$1"
   [[ -n $uuid ]] || { printf 'grub_safe_entries: no root UUID\n' >&2; return 1; }
+  # On an encrypted install the root is the mapper, not the UUID, and the extra
+  # fragment carries cryptdevice=. Without this the recovery entries would look
+  # right and fail to boot -- worse than not having them.
+  if [[ -n $extra ]]; then root="$extra"; fi
   cat <<ENTRIES
 #!/bin/sh
 exec tail -n +3 \$0
@@ -82,19 +89,19 @@ exec tail -n +3 \$0
 
 menuentry 'CyberOS (safe graphics)' --class cyberos {
     search --no-floppy --fs-uuid --set=root $uuid
-    linux /boot/vmlinuz-linux root=UUID=$uuid rw nomodeset cyberos.safegraphics=1
+    linux /boot/vmlinuz-linux $root rw nomodeset cyberos.safegraphics=1
     initrd /boot/initramfs-linux.img
 }
 
 menuentry 'CyberOS (LTS kernel)' --class cyberos {
     search --no-floppy --fs-uuid --set=root $uuid
-    linux /boot/vmlinuz-linux-lts root=UUID=$uuid rw
+    linux /boot/vmlinuz-linux-lts $root rw
     initrd /boot/initramfs-linux-lts.img
 }
 
 menuentry 'CyberOS (LTS kernel, safe graphics)' --class cyberos {
     search --no-floppy --fs-uuid --set=root $uuid
-    linux /boot/vmlinuz-linux-lts root=UUID=$uuid rw nomodeset cyberos.safegraphics=1
+    linux /boot/vmlinuz-linux-lts $root rw nomodeset cyberos.safegraphics=1
     initrd /boot/initramfs-linux-lts.img
 }
 ENTRIES
@@ -129,6 +136,36 @@ assert_no_sshd_in_live() {
   return 0
 }
 
+# luks_hooks <hooks-line> -- insert the encrypt hook in the only place it works.
+#
+# encrypt must run after block (which provides the device) and before filesystems
+# (which mounts it). keyboard must already be present, or a student on a non-US
+# layout cannot type the passphrase -- and an encrypted disk nobody can unlock has
+# no recovery path at all, so that case refuses rather than guesses.
+luks_hooks() {
+  local hooks=$1
+  if ! grep -qw keyboard <<<"$hooks"; then
+    printf 'HOOKS has no keyboard hook; refusing to encrypt a disk whose passphrase could not be typed\n' >&2
+    return 1
+  fi
+  if grep -qw encrypt <<<"$hooks"; then
+    printf '%s\n' "$hooks"
+    return 0
+  fi
+  if ! grep -qw block <<<"$hooks"; then
+    printf 'HOOKS has no block hook; cannot place encrypt\n' >&2
+    return 1
+  fi
+  printf '%s\n' "${hooks/block/block encrypt}"
+}
+
+# luks_cmdline <luks-uuid> <mapper-name> -- the GRUB_CMDLINE_LINUX fragment.
+luks_cmdline() {
+  local uuid=$1 mapper=${2:-cryptroot}
+  [[ -n $uuid ]] || { printf 'luks_cmdline: no LUKS UUID\n' >&2; return 1; }
+  printf 'cryptdevice=UUID=%s:%s root=/dev/mapper/%s\n' "$uuid" "$mapper" "$mapper"
+}
+
 # Everything below this point touches disks. Stop here when sourced for tests.
 if [[ -n ${CYBEROS_INSTALL_LIB_ONLY:-} ]]; then
   return 0 2>/dev/null || exit 0
@@ -145,10 +182,13 @@ while [[ $# -gt 0 ]]; do
     --user) USER_=$2; shift 2;;     --password) PASS=$2; shift 2;;
     # Read passwords from stdin instead of argv, which is world-readable
     # in /proc: line 1 is the user password, an optional line 2 is root's.
-    --password-stdin) IFS= read -r PASS; IFS= read -r ROOTPASS || true; shift;;
+    # Line 1 user password, optional line 2 root's, optional line 3 the LUKS
+    # passphrase. All three over stdin so none of them reaches argv.
+    --password-stdin) IFS= read -r PASS; IFS= read -r ROOTPASS || true; IFS= read -r LUKSPASS || true; shift;;
     --root-password) ROOTPASS=$2; shift 2;;
     --tz) TZ_=$2; shift 2;;         --fs) FS=$2; shift 2;;
     --swap) SWAP_GB=$2; shift 2;;   --yes|-y) YES=1; shift;;
+    --encrypt) ENCRYPT=1; shift;;
     -h|--help) usage;; *) die "unknown option $1";;
   esac
 done
@@ -296,6 +336,23 @@ else
   if [[ $(blkid -o value -s PTTYPE "$DISK" 2>/dev/null) == gpt ]]; then parted -s "$DISK" disk_set pmbr_boot on 2>/dev/null || true; fi
 fi
 
+# ---------------------------------------------------------------- encrypt
+# Done here, between partitioning and formatting: everything below formats and
+# mounts $ROOTP, so pointing ROOTP at the mapper makes the rest of the installer
+# encryption-agnostic.
+if [[ $ENCRYPT -eq 1 ]]; then
+  [[ -n $LUKSPASS ]] || die "--encrypt needs a passphrase: supply it as line 3 of --password-stdin"
+  command -v cryptsetup >/dev/null || die "cryptsetup not available"
+  msg "Encrypting $ROOTP (LUKS2)"
+  printf '%s' "$LUKSPASS" | cryptsetup luksFormat --type luks2 --batch-mode "$ROOTP" - \
+    || die "luksFormat failed on $ROOTP"
+  LUKS_UUID=$(blkid -o value -s UUID "$ROOTP")
+  [[ -n $LUKS_UUID ]] || die "no UUID on the LUKS container"
+  printf '%s' "$LUKSPASS" | cryptsetup open "$ROOTP" cryptroot - \
+    || die "could not open the LUKS container"
+  ROOTP=/dev/mapper/cryptroot
+fi
+
 # ---------------------------------------------------------------- format + mount
 msg "Formatting"
 if [[ $FS == btrfs ]]; then
@@ -414,11 +471,28 @@ ExecStart=/usr/local/bin/cyberos-firstboot
 WantedBy=multi-user.target
 M
 
+if [[ $ENCRYPT -eq 1 ]]; then
+  CUR=$(sed -nE 's/^HOOKS=\((.*)\)$/\1/p' /mnt/etc/mkinitcpio.conf)
+  NEW=$(luks_hooks "$CUR") || die "cannot place the encrypt hook in mkinitcpio.conf"
+  sed -i -E "s|^HOOKS=\(.*\)$|HOOKS=($NEW)|" /mnt/etc/mkinitcpio.conf
+  FRAG=$(luks_cmdline "$LUKS_UUID" cryptroot) || die "cannot build the LUKS kernel command line"
+  sed -i -E "s|^GRUB_CMDLINE_LINUX=\"(.*)\"$|GRUB_CMDLINE_LINUX=\"\\1 $FRAG\"|" /mnt/etc/default/grub
+  # There is no separate /boot, so GRUB itself has to unlock the container before
+  # it can read the kernel. Without this an encrypted install does not boot at all.
+  if grep -q '^#\?GRUB_ENABLE_CRYPTODISK=' /mnt/etc/default/grub; then
+    sed -i -E 's|^#?GRUB_ENABLE_CRYPTODISK=.*|GRUB_ENABLE_CRYPTODISK=y|' /mnt/etc/default/grub
+  else
+    echo 'GRUB_ENABLE_CRYPTODISK=y' >> /mnt/etc/default/grub
+  fi
+fi
+
 # Recovery entries GRUB's generator cannot produce, because they need an extra
 # kernel argument. Written here, where the root UUID is already known.
 ROOT_UUID=$(blkid -o value -s UUID "$ROOTP")
 if [[ -n $ROOT_UUID ]]; then
-  grub_safe_entries "$ROOT_UUID" > /mnt/etc/grub.d/40_custom
+  SAFE_ROOT=""
+  [[ $ENCRYPT -eq 1 ]] && SAFE_ROOT=$(luks_cmdline "$LUKS_UUID" cryptroot)
+  grub_safe_entries "$ROOT_UUID" "$SAFE_ROOT" > /mnt/etc/grub.d/40_custom
   chmod 755 /mnt/etc/grub.d/40_custom
 else
   echo "WARNING: no UUID for $ROOTP; skipping the recovery boot entries"
