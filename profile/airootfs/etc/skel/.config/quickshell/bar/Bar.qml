@@ -21,13 +21,23 @@ PanelWindow {
         RowLayout {                       // left
             anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 10 }
             spacing: 6
+            InstallButton {}
+            Workspaces {}
+            Media {}
         }
         WindowTitle { anchors.centerIn: parent }   // center
         RowLayout {                       // right
             id: right
             anchors { right: parent.right; verticalCenter: parent.verticalCenter; rightMargin: 10 }
             spacing: 6
+            Tray {}
+            BluetoothChip {}
+            Audio {}
+            Network {}
+            SysStats {}
+            Battery {}
             ClockChip {}
+            BarModule { icon: "\uf011"; onClicked: powerMenu.activeAsync = true }
         }
     }
 }
