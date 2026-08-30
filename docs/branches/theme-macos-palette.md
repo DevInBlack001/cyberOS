@@ -28,7 +28,7 @@ brand colours cannot express a 16-colour palette on their own.
 |---|---|
 | `usr/local/bin/cyberos-theme` | **The single source of truth.** Generates every config below. |
 | `etc/skel/.config/hypr/theme.conf` | generated |
-| `etc/skel/.config/waybar/colors.css` | generated |
+| `etc/skel/.config/quickshell/theme.json` | generated (superseded `waybar/colors.css` when the bar moved to Quickshell) |
 | `etc/skel/.config/rofi/colors.rasi` | generated |
 | `etc/skel/.config/foot/foot.ini` | generated **wholesale** |
 | `etc/skel/.config/mako/config` | generated |
@@ -53,7 +53,9 @@ including a terminal opened *after* the toggle.
   then chooses between them via the appearance portal, and with no portal running it
   defaults to dark — so terminals came up dark in light mode. Write the **active** palette
   into *both* sections. *(Fix is in `main`'s working tree, uncommitted.)*
-- **Waybar restart races.** `pkill -x waybar; sleep 0.4; (setsid waybar &)`.
+- **Waybar restart races** (historical, pre-Quickshell). `pkill -x waybar; sleep 0.4;
+  (setsid waybar &)`. The Quickshell bar has no such race: `Theme.qml` watches
+  `theme.json` and re-themes live, no restart needed.
 - **The wallpapers use a radial gradient with two stops.** Recolouring only one leaves them
   green.
 - **Never rewrite `waybar/config.jsonc` by hand.** It carries 23 private-use-area glyphs that

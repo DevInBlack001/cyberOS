@@ -1,8 +1,9 @@
 # CyberOS bar widgets
 
 Drop a `.qml` file in this directory (`~/.config/quickshell/widgets/`) and it
-appears on the bar's right side. No shell edit, no restart -- `qs` picks it
-up on next launch (or `hyprctl reload` if you've bound that to reload qs too).
+appears on the bar's right side. No shell edit, no restart -- `WidgetHost.qml`
+watches this directory with a `FolderListModel`, so a dropped file appears on
+the bar immediately.
 
 ## The contract
 
@@ -19,9 +20,8 @@ up on next launch (or `hyprctl reload` if you've bound that to reload qs too).
   Super+Shift+T's light/dark toggle.
 - **Icons are `\uXXXX` escapes, never a raw glyph pasted into the source.**
   Copy-pasting the character itself risks losing invisible private-use
-  codepoints (this bit an earlier version of this desktop's bar config
-  once). Look up the codepoint in the JetBrainsMono Nerd Font cmap and
-  write the escape.
+  codepoints -- an easy mistake to make and hard to spot by eye. Look up the
+  codepoint in the JetBrainsMono Nerd Font cmap and write the escape.
 - **A broken widget shows as a gap, not a crashed bar.** Each widget gets its
   own `Loader`; a QML error in your file logs `cyberos widget failed to
   load: <file>` to the qs log and leaves an empty slot where it would have
