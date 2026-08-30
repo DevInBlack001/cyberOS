@@ -180,6 +180,8 @@ gnome-text-editor
 gnome-disk-utility
 
 # ---- virtualization ----
+virtualbox
+virtualbox-host-dkms
 virtualbox-guest-utils
 qemu-guest-agent
 open-vm-tools
@@ -214,13 +216,40 @@ lsof
 socat
 openbsd-netcat
 
-# ---- security baseline (present in every edition) ----
-# Not the lab toolset: these are what docs/SPEC.md §7 requires on every machine.
-arch-audit
+# ---- security lab toolset ----
+john
+hashcat
+hydra
+aircrack-ng
+sqlmap
+nikto
+gobuster
+binwalk
+radare2
+ghidra
+metasploit
+exploitdb
+hashcat-utils
+masscan
+arp-scan
+bettercap
+impacket
+python-scapy
+smbclient
+nbtscan
+sslscan
+testssl.sh
+foremost
+perl-image-exiftool
+sleuthkit
+volatility3
+yara
 clamav
 lynis
 docker
 docker-compose
+# CVE reporting against the pinned channel. docs/SPEC.md S4.
+arch-audit
 
 # ---- from the local [cyberos] repo (AUR + local PKGBUILDs, built by build.sh) ----
 pixie-sddm-git
