@@ -60,3 +60,12 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
     [ -f "$QS/bar/$f" ]
   done
 }
+
+@test "power menu replaces the rofi script with the same four actions" {
+  [ ! -e "$ROOT/profile/airootfs/etc/skel/.config/rofi/powermenu.sh" ]
+  ! grep -q 'powermenu.sh' "$ROOT/profile/profiledef.sh"
+  for a in hyprlock 'hl.dsp.exit' 'systemctl.*reboot' 'systemctl.*poweroff'; do
+    grep -qE "$a" "$QS/power/PowerMenu.qml"
+  done
+  grep -q '"power"' "$QS/shell.qml"   # ipc target
+}
