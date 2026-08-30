@@ -1,9 +1,10 @@
 # CyberOS bar widgets
 
 Drop a `.qml` file in this directory (`~/.config/quickshell/widgets/`) and it
-appears on the bar's right side. No shell edit, no restart -- `WidgetHost.qml`
-watches this directory with a `FolderListModel`, so a dropped file appears on
-the bar immediately.
+appears on the bar's right side, no shell code to edit. Widgets are loaded when
+the shell starts: log out and back in (or run `pkill -x qs; qs -d`) after adding
+or editing a file -- changes do not hot-reload. (Verified in a VM: a file added
+while the shell runs does not appear until the next start.)
 
 ## The contract
 
