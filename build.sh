@@ -4,6 +4,8 @@
 #    1. builds the AUR packages listed in aur/packages.txt into repo/ (as your user)
 #    2. runs mkarchiso (as root) with profile/  →  out/cyberos-YYYY.MM.DD-x86_64.iso
 #
+#  Signing:   --sign-key <KEYID>  sign the [cyberos] repo; required for release builds
+#
 #  Requirements (on an Arch host):  sudo pacman -S archiso base-devel git
 #  Packet Tracer: drop CiscoPacketTracer_*_Ubuntu_64bit.deb (from netacad.com) into aur/
 # ============================================================================
@@ -14,12 +16,13 @@ REPO="$ROOT/repo"; WORK="$ROOT/work"; OUT="$ROOT/out"; PROFILE="$ROOT/profile"
 msg() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 die() { echo "ERROR: $*" >&2; exit 1; }
 
-SKIP_AUR=0; ONLY_AUR=0
+SKIP_AUR=0; ONLY_AUR=0; SIGN_KEY=
 while [[ $# -gt 0 ]]; do
   case $1 in
     --skip-aur) SKIP_AUR=1; shift;;
     --only-aur) ONLY_AUR=1; shift;;
     --clean)    sudo rm -rf "$WORK"; shift;;
+    --sign-key) SIGN_KEY=${2:-}; shift 2;;
     # Print the whole leading comment block, so help cannot drift out of sync
     # with the header the way a hardcoded line range does.
     -h|--help)  awk 'NR>1 && /^#/ {print; next} NR>1 {exit}' "$0"; exit 0;;
@@ -62,8 +65,15 @@ if [[ $SKIP_AUR -eq 0 ]]; then
     cp -f "$d"/*.pkg.tar.zst "$REPO/"
   done < "$ROOT/aur/packages.txt"
   msg "Creating local repo"
-  rm -f "$REPO"/cyberos.db* "$REPO"/cyberos.files*
-  repo-add -q "$REPO/cyberos.db.tar.gz" "$REPO"/*.pkg.tar.zst
+  rm -f "$REPO"/cyberos.db* "$REPO"/cyberos.files* "$REPO"/*.sig
+  if [[ -n $SIGN_KEY ]]; then
+    for pkg in "$REPO"/*.pkg.tar.zst; do
+      gpg --detach-sign --local-user "$SIGN_KEY" --yes "$pkg"
+    done
+    repo-add -q --sign --key "$SIGN_KEY" "$REPO/cyberos.db.tar.gz" "$REPO"/*.pkg.tar.zst
+  else
+    repo-add -q "$REPO/cyberos.db.tar.gz" "$REPO"/*.pkg.tar.zst
+  fi
 fi
 [[ $ONLY_AUR -eq 1 ]] && exit 0
 
@@ -71,7 +81,22 @@ fi
 
 # ------------------------------------------------------------------ 2. ISO
 msg "Generating profile/pacman.conf"
-sed "s|@REPO_DIR@|$REPO|" "$PROFILE/pacman.conf.in" > "$PROFILE/pacman.conf"
+if [[ -n $SIGN_KEY ]]; then
+  SIGLEVEL="Required DatabaseRequired TrustedOnly"
+else
+  SIGLEVEL="Optional TrustAll"
+  cat >&2 <<'WARN'
+
+  WARNING: building with an UNSIGNED [cyberos] repo.
+
+  This is fine for a local development build. It is not fine for anything a
+  student installs: pass --sign-key <KEYID> to sign the repo, and see
+  docs/SPEC.md §5.5. Signing needs the department key -- decision D2.
+
+WARN
+fi
+sed -e "s|@REPO_DIR@|$REPO|" -e "s|@CYBEROS_SIGLEVEL@|$SIGLEVEL|" \
+  "$PROFILE/pacman.conf.in" > "$PROFILE/pacman.conf"
 
 msg "Building ISO with mkarchiso (needs root)"
 mkdir -p "$OUT" "$WORK"

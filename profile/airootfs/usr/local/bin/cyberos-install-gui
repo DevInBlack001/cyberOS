@@ -324,9 +324,51 @@ class Wizard(Adw.ApplicationWindow):
         swap_row = Adw.ActionRow(title="Swap file", subtitle="GiB, 0 for none")
         swap_row.add_suffix(self.swap)
 
-        for w in (self.tz_row, self.fs_row, swap_row):
+        self.encrypt = Adw.SwitchRow(
+            title="Encrypt this disk",
+            subtitle="LUKS2. You will be asked for this passphrase at every boot.")
+        self.e_luks = Adw.PasswordEntryRow(title="Encryption passphrase")
+        self.e_luks2 = Adw.PasswordEntryRow(title="Confirm passphrase")
+        self.e_luks.set_sensitive(False)
+        self.e_luks2.set_sensitive(False)
+        self.encrypt.connect("notify::active", self.on_encrypt_toggled)
+
+        self.luks_hint = Gtk.Label(xalign=0, wrap=True)
+        self.luks_hint.add_css_class("dim-label")
+        self.luks_hint.add_css_class("caption")
+
+        for w in (self.tz_row, self.fs_row, swap_row,
+                  self.encrypt, self.e_luks, self.e_luks2):
             group.add(w)
-        return self._page("Options", None, group)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.append(group)
+        box.append(self.luks_hint)
+        return self._page("Options", None, box)
+
+    def on_encrypt_toggled(self, *_):
+        on = self.encrypt.get_active()
+        self.e_luks.set_sensitive(on)
+        self.e_luks2.set_sensitive(on)
+        if not on:
+            self.e_luks.set_text("")
+            self.e_luks2.set_text("")
+            self.luks_hint.set_text("")
+
+    def validate_encryption(self):
+        """An unlockable disk has no recovery path, so this is checked hard."""
+        if not self.encrypt.get_active():
+            self.luks_hint.set_text("")
+            return True
+        pw, pw2 = self.e_luks.get_text(), self.e_luks2.get_text()
+        problem = None
+        if not pw:
+            problem = "An empty passphrase would produce a disk nobody can open."
+        elif pw != pw2:
+            problem = "The passphrases do not match."
+        elif len(pw) < 8:
+            problem = "Use at least 8 characters; this is the only thing protecting the disk."
+        self.luks_hint.set_text(problem or "")
+        return problem is None
 
     def page_confirm(self):
         self.summary = Gtk.Label(justify=Gtk.Justification.LEFT, xalign=0,
@@ -408,6 +450,8 @@ class Wizard(Adw.ApplicationWindow):
         if self.page == "account" and not self.validate_account():
             return
         if self.page == "options":
+            if not self.validate_encryption():
+                return
             self.fill_summary()
         while self.index < len(self.pages) - 1:
             self.index += 1
@@ -471,6 +515,7 @@ class Wizard(Adw.ApplicationWindow):
             "--tz", self.tz_list.get_string(self.tz_row.get_selected()),
             "--fs", self.fs_list.get_string(self.fs_row.get_selected()),
             "--swap", str(int(self.swap.get_value())),
+            *(["--encrypt"] if self.encrypt.get_active() else []),
             "--password-stdin", "--yes",
         ]
 
@@ -502,8 +547,14 @@ class Wizard(Adw.ApplicationWindow):
             self.finish(1)
             return
 
+        # Line 1 user password, line 2 root's (empty means "same as the user's"),
+        # line 3 the LUKS passphrase. All on stdin: argv is world-readable
+        # through /proc/*/cmdline.
+        secrets = self.e_pass.get_text() + "\n" + "\n"
+        if self.encrypt.get_active():
+            secrets += self.e_luks.get_text() + "\n"
         stdin = self.proc.get_stdin_pipe()
-        stdin.write_all((self.e_pass.get_text() + "\n").encode(), None)
+        stdin.write_all(secrets.encode(), None)
         stdin.close(None)
 
         stream = Gio.DataInputStream.new(self.proc.get_stdout_pipe())
