@@ -69,3 +69,24 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   done
   grep -q '"power"' "$QS/shell.qml"   # ipc target
 }
+
+@test "osd handles the five ipc functions and swayosd is gone" {
+  for fn in volumeUp volumeDown volumeMute brightnessUp brightnessDown; do
+    grep -q "function $fn" "$QS/shell.qml"
+  done
+  ! grep -rq 'swayosd' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
+  ! grep -qE '^swayosd$' "$ROOT/profile/packages.x86_64"
+  grep -q 'qs ipc call osd' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
+}
+
+@test "osd: bottom panel with progress fill and hide timer, theme-coloured" {
+  grep -q 'PanelWindow' "$QS/osd/Osd.qml"
+  grep -q 'bottom: true' "$QS/osd/Osd.qml"
+  grep -q 'Timer' "$QS/osd/Osd.qml"
+  grep -q 'Theme\.' "$QS/osd/Osd.qml"
+}
+
+@test "osd: volume adjusts pipewire, brightness shells out to brightnessctl" {
+  grep -q 'Pipewire.defaultAudioSink' "$QS/shell.qml"
+  grep -q 'brightnessctl' "$QS/shell.qml"
+}

@@ -71,3 +71,13 @@ run_config() { lua -e "dofile('$STUB'); dofile('$HYPR/hyprland.lua'); report()";
 @test "the legacy hyprland.conf is gone, so the two cannot drift" {
   [ ! -e "$HYPR/hyprland.conf" ]
 }
+
+@test "volume/brightness binds dispatch through the quickshell OSD ipc, swayosd gone" {
+  run run_config
+  [[ "$output" == *"bindcmd XF86AudioRaiseVolume :: qs ipc call osd volumeUp"* ]]
+  [[ "$output" == *"bindcmd XF86AudioLowerVolume :: qs ipc call osd volumeDown"* ]]
+  [[ "$output" == *"bindcmd XF86AudioMute :: qs ipc call osd volumeMute"* ]]
+  [[ "$output" == *"bindcmd XF86MonBrightnessUp :: qs ipc call osd brightnessUp"* ]]
+  [[ "$output" == *"bindcmd XF86MonBrightnessDown :: qs ipc call osd brightnessDown"* ]]
+  ! grep -q swayosd <<<"$output"
+}
