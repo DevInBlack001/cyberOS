@@ -134,8 +134,25 @@ compose_packages "$EDITION" \
 printf '   %s packages\n' "$(grep -cv '^#\|^$' "$PROFILE/packages.x86_64")"
 
 msg "Building ISO with mkarchiso (needs root)"
-mkdir -p "$OUT"
-sudo mkarchiso -v -w "$WORK/iso" -o "$OUT" "$PROFILE"
+mkdir -p "$OUT" "$WORK"
+LOG="$WORK/build.log"
+
+# A stale work dir from a previous package set makes mkarchiso fail in ways that
+# look like a profile bug. It is a scratch dir, so start clean.
+if [[ -d $WORK/iso ]]; then
+  msg "Removing the previous work directory"
+  sudo rm -rf "$WORK/iso"
+fi
+
+# Tee to a log: without one, a failed build leaves nothing to read afterwards
+# but scrollback.
+echo "   logging to $LOG"
+set -o pipefail
+if ! sudo mkarchiso -v -w "$WORK/iso" -o "$OUT" "$PROFILE" 2>&1 | tee "$LOG"; then
+  echo
+  die "mkarchiso failed. Last 20 lines of $LOG:
+$(tail -20 "$LOG")"
+fi
 sudo chown "$USER:$USER" "$OUT"/*.iso
 msg "ISO ready:"; ls -lh "$OUT"/*.iso
 ISO=$(ls -t "$OUT"/*.iso | head -1)
