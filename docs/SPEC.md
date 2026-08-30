@@ -31,30 +31,50 @@ change under an exam.
 
 ---
 
-## 1. Scope and editions
+## 1. Scope
 
-CyberOS ships two editions from one profile.
+CyberOS ships as **one image**, built from one profile, with everything installed and
+working offline.
 
-| | `cyberos-base` | `cyberos-lab` |
-|---|---|---|
-| Contents | Live session, installer, desktop, dev basics | `base` + the full security-lab toolset, offline |
-| Size budget | **MUST be ≤ 2.0 GiB** | SHOULD be ≤ 6.0 GiB |
-| Distribution | GitHub release asset, campus mirror, USB | Campus mirror, USB, department NAS |
-| Lab tools | Installed post-install from `[cyberos-apps]` over the network | Preinstalled, works with no network |
+| | |
+|---|---|
+| Contents | Live session, installer, desktop, dev tools, the full security-lab toolset |
+| Size | ~4.7 GiB, 212 packages |
+| Distribution | Campus mirror, department NAS, USB |
 
-**Rationale for the 2.0 GiB cap:** GitHub refuses release assets over 2 GiB. The current
-image is 4.9 GiB and therefore cannot be distributed through the repo's own release page —
-a limitation already hit in practice. `base` restores that channel; `lab` keeps the
-offline-classroom use case.
+### 1.1 Why not a smaller "base" edition
 
-Both editions MUST be built from the same `profile/` with the package set selected by a
-build flag, so the two cannot drift.
+An earlier draft of this spec required a `cyberos-base` edition of **2.0 GiB or less**, so
+that the ISO could be attached to a GitHub release (assets cap at 2 GiB). That was
+implemented, measured, and **withdrawn**, because the number was not reachable.
+
+Splitting the security-lab toolset out moved the image from 4.9 GiB to 4.7 GiB. The lab
+tools were never the bulk:
+
+| Package | Installed |
+|---|---|
+| `onlyoffice-bin` | 1252 MiB |
+| `visual-studio-code-bin` | 1018 MiB |
+| the two together | **2270 MiB** |
+
+Reaching 2 GiB would have meant dropping VS Code, OnlyOffice, both kernels' headers, the
+CJK and Nerd fonts, `gcc`, `cmake`, `nodejs`, `docker`, `clamav` and Firefox — roughly
+5.5 GiB of installed content. What remains after that is not a student desktop, and a
+student with no network gets almost nothing.
+
+The decision is therefore that **GitHub releases are not a distribution channel for the
+ISO**. Tags and source stay on GitHub; the image goes out by campus mirror, NAS and USB,
+which is how it has actually been distributed all along. Release notes link to the mirror.
+
+This section is kept rather than deleted because the 2 GiB figure was written into a
+specification, built against, and disproved by measurement. Someone will suggest it again.
 
 ### 1.1 Out of scope
 
 - Architectures other than `x86_64`. No aarch64, no 32-bit.
 - Server, container, or cloud images.
 - Any device where the department does not control the firmware settings.
+- Distributing the ISO as a GitHub release asset — see §1.1.
 
 ---
 
@@ -441,7 +461,7 @@ These are not yet settled and block the work that depends on them.
 | D1 | Where are `[cyberos*]` repos hosted? 864 MiB rules out GitHub Pages. Campus web server, an object store, or a department NAS? | §4, §5 — nothing publishes until this is answered |
 | D2 | Who holds the offline signing primary key, and where? | §5.5 |
 | D3 | Is there a campus host for the ALA caching proxy? | §4.5 |
-| D4 | Cisco Packet Tracer needs a licensed `.deb` from netacad that cannot be redistributed. Does it ship in `lab`, or install post-hoc? | §1 edition contents |
+| D4 | Cisco Packet Tracer needs a licensed `.deb` from netacad that cannot be redistributed. Does it ship in the image, or install post-hoc? | §1 contents |
 
 ---
 

@@ -13,11 +13,10 @@ every one of them, and an image small enough to distribute.
 | Path | Role |
 |---|---|
 | `profile/packages.x86_64` | kernel set, drivers, firmware |
-| `profile/packages.base.x86_64` / `packages.lab.x86_64` | edition split |
 | `profile/efiboot/loader/entries/` | live boot entries |
 | `profile/syslinux/` | BIOS boot entries |
 | `profile/airootfs/usr/local/bin/cyberos-install` | installed-system boot entries |
-| `build.sh` | `--edition base|lab` |
+| `build.sh` | AUR clone handling, build logging |
 
 ## What must change
 
@@ -32,15 +31,19 @@ every one of them, and an image small enough to distribute.
 4. **`nvidia-open-dkms` enabled**, with the Turing-and-newer limitation documented. Older
    NVIDIA cards are Tier 3.
 5. **`fwupd`** — several Tier 2 laptop failures are firmware bugs with an LVFS fix.
-6. **The edition split.** The image is 4.9 GiB and cannot be a GitHub release asset
-   (2 GiB cap). `cyberos-base` must fit under 2.0 GiB; `cyberos-lab` keeps the full offline
-   toolset for classroom USBs.
+6. ~~**The edition split.**~~ **Withdrawn after measurement.** Splitting the security-lab
+   toolset out moved the image from 4.9 GiB to only 4.7 GiB — the lab tools were never the
+   bulk. VS Code (1018 MiB) and OnlyOffice (1252 MiB) are. Reaching 2 GiB would have meant
+   dropping those plus Firefox, both kernels' headers, the fonts, gcc and docker, which is
+   not a student desktop. CyberOS ships as one image and is distributed by mirror, NAS and
+   USB rather than through GitHub releases. See `docs/SPEC.md` §1.1.
 
 ## The rule that defines this branch
 
-**Both editions build from one `profile/`.** The difference is a package list selected by a
-build flag. Two profiles would drift, and the drift would only show up on a student's
-machine.
+**A recovery path is a boot requirement, not a nicety.** A student whose GPU driver fails
+or whose kernel regressed must still be able to reach a shell — someone who cannot boot
+cannot file a bug. Safe graphics and the LTS kernel entry are therefore blocking, and both
+must exist on the *installed* system, not only the live image.
 
 ## Untested territory
 

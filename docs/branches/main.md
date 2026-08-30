@@ -34,11 +34,15 @@ tools/                        # release tooling (arrives with channels/ and pack
 ## Release procedure
 
 1. Confirm the working tree is clean and `main` is up to date.
-2. `sudo ./build.sh` — must be run by a human; `sudo` cannot be driven from an agent session.
+2. `./build.sh` — run as a **normal user**, not with sudo: it refuses to run as root and
+   calls `sudo` itself only for `mkarchiso`. It must be run by a human, because `sudo`
+   cannot take a password from an agent session.
 3. Run the §6.2 test matrix. Every Tier 1 cell must pass.
 4. `git tag build-NN` for an engineering build, `git tag v2026.MM` for a stable snapshot.
-5. Push the tag. Attach `cyberos-base` to the GitHub release; `cyberos-lab` exceeds
-   GitHub's 2 GiB asset cap and goes to the campus mirror.
+5. Push the tag. The ISO is **not** attached to the GitHub release — at ~4.7 GiB it is
+   over GitHub's 2 GiB asset cap, and it cannot be shrunk to fit without gutting it
+   (`docs/SPEC.md` §1.1). Publish it to the campus mirror and link it from the release
+   notes.
 
 ## Known outstanding work on `main`
 

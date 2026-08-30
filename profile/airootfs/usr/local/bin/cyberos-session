@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# cyberos-session -- start the CyberOS desktop.
+#
+# Hyprland needs a working OpenGL/Wayland stack. On hardware where it does not
+# initialise, the student gets a black screen and no way to report it. Booting
+# the "safe graphics" entry adds cyberos.safegraphics to the kernel command
+# line; this wrapper turns that into software rendering.
+
+# Only when executed: `set -u` leaks into bats and breaks its internals when
+# this file is sourced by the test suite.
+if [[ ${BASH_SOURCE[0]} == "${0}" ]]; then
+  set -euo pipefail
+fi
+
+# safe_graphics_requested <cmdline> -- exit 0 if the token is present.
+safe_graphics_requested() {
+  local word
+  for word in $1; do
+    case $word in
+      cyberos.safegraphics|cyberos.safegraphics=*) return 0 ;;
+    esac
+  done
+  return 1
+}
+
+# session_env <cmdline> -- the environment to export, one VAR=value per line.
+session_env() {
+  safe_graphics_requested "$1" || return 0
+  printf 'WLR_RENDERER_ALLOW_SOFTWARE=1\n'
+  printf 'LIBGL_ALWAYS_SOFTWARE=1\n'
+  printf 'WLR_NO_HARDWARE_CURSORS=1\n'
+}
+
+if [[ ${BASH_SOURCE[0]} == "${0}" ]]; then
+  cmdline=$(cat /proc/cmdline 2>/dev/null || echo "")
+  while IFS= read -r line; do
+    [[ -n $line ]] && export "${line?}"
+  done < <(session_env "$cmdline")
+  # start-hyprland is what the stock session file runs; exec-ing Hyprland
+  # directly makes it print a "started without start-hyprland" warning banner
+  # on every login.
+  exec /usr/bin/start-hyprland "$@"
+fi

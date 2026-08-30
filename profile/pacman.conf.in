@@ -16,6 +16,12 @@ Include = /etc/pacman.d/mirrorlist
 [extra]
 Include = /etc/pacman.d/mirrorlist
 
+# @CYBEROS_SIGLEVEL@ is substituted by build.sh: signatures are REQUIRED when the
+# build was given a key with --sign-key, and only relaxed for an unsigned local
+# build, which build.sh warns about. The repo this points at is a directory the
+# same script wrote seconds earlier on this same machine; the config students'
+# machines use over a network is airootfs/etc/pacman.conf, where signatures are
+# never optional.
 [cyberos]
-SigLevel = Optional TrustAll
+SigLevel = @CYBEROS_SIGLEVEL@
 Server = file://@REPO_DIR@

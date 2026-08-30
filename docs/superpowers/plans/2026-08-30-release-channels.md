@@ -940,7 +940,7 @@ because `mkarchiso` copies `airootfs/` with `--no-preserve=mode`.
 - Verify: `profile/profiledef.sh`
 
 **Interfaces:**
-- Consumes: the built ISO from `sudo ./build.sh`
+- Consumes: the built ISO from `./build.sh`
 - Produces: a recorded pass or fail against release criteria 9 in `docs/SPEC.md` §6.1
 
 - [ ] **Step 1: Confirm the permissions entry exists before building**
@@ -955,7 +955,7 @@ cheaper than a 30-minute rebuild.
 
 - [ ] **Step 2: Build**
 
-`sudo ./build.sh` must be run **by a person** — `sudo` cannot take a password from an agent
+`./build.sh` must be run **by a person** — `sudo` cannot take a password from an agent
 session. Ask the user to run it and to say when the build finishes; watch `work/build.log`
 meanwhile. The only expected warning is `customize_airootfs.sh is deprecated`.
 
@@ -1008,7 +1008,8 @@ gh pr create --base main --title "Controlled, delayed rolling updates" \
 
 ## Notes for the executor
 
-- **`sudo ./build.sh` cannot be run from an agent session.** Ask the user to run it.
+- **`./build.sh` is run as a normal user, not with sudo** — it refuses to run as root and
+  calls sudo itself. It cannot be run from an agent session; ask the user.
 - **Do not combine `pkill -f` with any text naming the target process.** The pattern matches
   the running command line, including inside heredocs, and kills the shell running it. This
   has happened five times in this repo. Run `pkill -x <name>` as its own command.

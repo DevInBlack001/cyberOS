@@ -1,0 +1,5 @@
+[Desktop Entry]
+Name=CyberOS
+Comment=Hyprland, with software rendering when booted for safe graphics
+Exec=/usr/local/bin/cyberos-session
+Type=Application

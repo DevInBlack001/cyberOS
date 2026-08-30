@@ -4,7 +4,7 @@
 
 **Goal:** Make "runs well on all machines" testable — a recovery path on every supported machine, drivers for the hardware students actually own, an image small enough to distribute, a defensible security baseline, and an automated harness that proves it instead of a person clicking through QEMU once.
 
-**Architecture:** Three support tiers replace the untestable claim; only Tier 1 gates a release. Two recovery paths (`linux-lts` and a safe-graphics boot entry) mean a student who cannot reach a desktop still has a way back in. The image splits into `cyberos-base` (≤ 2.0 GiB, distributable as a GitHub release asset) and `cyberos-lab` (full offline toolset), generated from one profile by a build flag. A QEMU harness drives the release criteria over a serial console with autologin — not through screen scraping, which has already proven unreliable in this repo.
+**Architecture:** Three support tiers replace the untestable claim; only Tier 1 gates a release. Two recovery paths (`linux-lts` and a safe-graphics boot entry) mean a student who cannot reach a desktop still has a way back in. The image ships as one ~4.7 GiB build — an edition split was implemented, measured and withdrawn (see Task 3 and `docs/SPEC.md` §1.1). A QEMU harness drives the release criteria over a serial console with autologin — not through screen scraping, which has already proven unreliable in this repo.
 
 **Tech Stack:** archiso 89, mkarchiso, GRUB, mkinitcpio 41.1, QEMU/KVM + OVMF, `linux` 7.1.9 / `linux-lts` 6.18.46, `nvidia-open-dkms` 610.57, `broadcom-wl-dkms`, `fwupd` 2.1.7, `ufw`, `cryptsetup` (LUKS2), `bats` 1.14.
 
@@ -15,20 +15,18 @@
 - Two branches: `hardware/enablement` (Tasks 1–3, 6) and `security/hardening` (Tasks 4–5), both off `main`. Keep the commits separate; they have different CODEOWNERS.
 - Commit author is `edbron <edbron411@gmail.com>`. Do not override the repo-local git identity.
 - **Both editions build from one `profile/`.** The difference is a package list selected by a build flag. Two profiles would drift, and the drift would only surface on a student's machine.
-- **`cyberos-base` MUST be ≤ 2.0 GiB.** GitHub refuses release assets above that, and the current 4.9 GiB image therefore cannot be distributed through the repo's own release page.
+- ~~`cyberos-base` MUST be ≤ 2.0 GiB.~~ **Withdrawn — the figure is unreachable.** See Task 3 and `docs/SPEC.md` §1.1. CyberOS ships one image, distributed by mirror and USB.
 - Every executable under `profile/airootfs/` MUST be in `profile/profiledef.sh` `file_permissions` — `mkarchiso` copies with `cp -af --no-preserve=ownership,mode`.
 - **`linux-hardened` MUST NOT become the default kernel.** Its ptrace and BPF restrictions break `gdb`, Ghidra and Metasploit, which are the point of the image.
 - **Docker stays.** The course needs it. The mitigation is the firewall, and not putting students in the `docker` group by default.
-- `sudo ./build.sh` and `sudo ./test-vm.sh` must be run by a person; `sudo` cannot take a password from an agent session.
+- `./build.sh` and `./test-vm.sh` are run as a **normal user**, not with sudo — build.sh refuses to run as root and calls sudo itself. Both must be run by a person; `sudo` cannot take a password from an agent session.
 
 ## File Structure
 
 | File | Responsibility |
 |---|---|
-| `profile/packages.base.x86_64` | the `base` edition package set (was `packages.x86_64`) |
-| `profile/packages.lab.x86_64` | security-lab toolset, added for the `lab` edition |
 | `profile/packages.x86_64` | **generated** by `build.sh`; gitignored, like `profile/pacman.conf` |
-| `build.sh` | `--edition base\|lab`, and the size assertion |
+| `build.sh` | AUR clone reset, mkarchiso logging |
 | `profile/airootfs/usr/local/bin/cyberos-session` | reads `/proc/cmdline`, sets software rendering, execs Hyprland |
 | `profile/airootfs/usr/share/wayland-sessions/cyberos.desktop` | SDDM session pointing at the wrapper |
 | `profile/efiboot/loader/entries/` | live boot entries incl. safe graphics |
@@ -428,7 +426,21 @@ git commit -m "hardware: install both kernels and both recovery boot entries"
 
 ---
 
-### Task 3: Drivers, firmware, and the edition split
+### Task 3: Drivers and firmware
+
+> **The edition split in this task was implemented, measured, and WITHDRAWN.**
+> Moving the security-lab toolset out took the image from 4.9 GiB to 4.7 GiB — the lab
+> tools were never the bulk. `visual-studio-code-bin` (1018 MiB) and `onlyoffice-bin`
+> (1252 MiB) are. Reaching 2 GiB would have meant dropping those plus Firefox, both
+> kernels' headers, the CJK and Nerd fonts, gcc, cmake, nodejs, docker and clamav —
+> roughly 5.5 GiB of installed content, leaving something that is not a student desktop.
+>
+> CyberOS ships **one** image, distributed by campus mirror, NAS and USB. GitHub releases
+> carry tags and source only. `docs/SPEC.md` §1.1 records this so the 2 GiB figure is not
+> proposed again.
+>
+> **Do the driver work below; skip every step that creates `packages.base.x86_64`,
+> `packages.lab.x86_64`, `compose_packages`, `assert_iso_size` or `--edition`.**
 
 The hardware students actually own, and an image small enough to hand them.
 
@@ -1221,7 +1233,7 @@ git commit -m "qa: automate the release criteria over a serial console"
 
 ```bash
 git push -u origin hardware/enablement
-gh pr create --base main --title "Hardware tiers, recovery paths, and the edition split" \
+gh pr create --base main --title "Hardware tiers: recovery paths and drivers" \
   --body "Implements docs/SPEC.md §2 and §6."
 
 git push -u origin security/hardening
@@ -1233,7 +1245,8 @@ gh pr create --base main --title "Security baseline: firewall, signatures, LUKS2
 
 ## Notes for the executor
 
-- **`sudo ./build.sh` and `sudo ./test-vm.sh` cannot be run from an agent session.** Ask the
+- **`./build.sh` and `./test-vm.sh` are run as a normal user, not with sudo,** and cannot be
+  run from an agent session. Ask the
   user to run them and to say when they finish; watch `work/build.log` meanwhile.
 - **Give foot more than three seconds to appear before typing into it.** Keystrokes sent to a
   window that has not finished starting go nowhere, and the resulting silence has already

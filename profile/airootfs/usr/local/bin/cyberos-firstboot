@@ -7,5 +7,18 @@ while IFS=: read -r name _ uid _ _ home _; do
   [[ $uid -ge 1000 && $uid -lt 65534 && -d $home ]] || continue
   runuser -u "$name" -- xdg-user-dirs-update 2>/dev/null || true
 done < /etc/passwd
+# Firewall: default-deny incoming. Applied here rather than in the installer's
+# chroot, because ufw needs a running kernel to load its rules. docs/SPEC.md S1.
+if command -v ufw >/dev/null && [[ ! -e /etc/cyberos/firewall-applied ]]; then
+  # No `ufw reset` here: on a fresh install there is nothing to reset, and reset
+  # moves the shipped rule files aside -- ufw.service, starting concurrently on
+  # first boot, then found no before.rules and failed. Seen on build 15.
+  ufw default deny incoming  >/dev/null 2>&1 || true
+  ufw default allow outgoing >/dev/null 2>&1 || true
+  ufw --force enable         >/dev/null 2>&1 || true
+  systemctl enable --now ufw.service >/dev/null 2>&1 || true
+  mkdir -p /etc/cyberos && : >/etc/cyberos/firewall-applied
+fi
+
 systemctl disable cyberos-firstboot.service 2>/dev/null || true
 rm -f /etc/systemd/system/cyberos-firstboot.service

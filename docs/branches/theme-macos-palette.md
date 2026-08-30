@@ -59,3 +59,11 @@ including a terminal opened *after* the toggle.
 - **Never rewrite `waybar/config.jsonc` by hand.** It carries 23 private-use-area glyphs that
   are invisible in tool output and were lost once already. Edit at byte level and check the
   PUA count before and after.
+
+## Follow-up work
+
+- **Port `hyprland.conf` to the Lua config format.** Hyprland 0.56.2 prints a warning banner
+  on every login — *"You are using the .conf config format, support for which will be
+  removed in Hyprland 0.57"* — seen on build 15 on real hardware. This is not cosmetic: when
+  0.57 lands via the `stable` channel the desktop stops starting. `cyberos-theme` generates
+  `hypr/theme.conf`, so the generator must move with it. Owner: `theme/`.
