@@ -67,4 +67,6 @@ including a terminal opened *after* the toggle.
   a missing file degrades instead of tripping emergency mode; `theme.conf` is still
   generated because `hyprlock` speaks hyprlang. The `.conf` was deleted, not kept alongside,
   so the two formats cannot drift. Tested by executing the config against a stub `hl` and
-  asserting the binds, autostarts and palette it registers (`tests/hyprland-lua.bats`).
+  asserting the binds, autostarts and palette it registers (`tests/hyprland-lua.bats`), and
+  verified in a running session on the build-15 install: 69 binds registered, the border
+  colour arriving from `theme.lua`, and the deprecation banner gone.
