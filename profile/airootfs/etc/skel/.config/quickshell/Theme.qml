@@ -36,8 +36,8 @@ Singleton {
     readonly property int radius: 14
 
     FileView {
-        // Quickshell.env() returns "" for an unset var, never null/undefined
-        // -- a `!== ""` guard is always true, so the $HOME fallback below
+        // Quickshell.env() returns null for an unset var (verified live)
+        // -- so a `!== ""` guard is always true, so the $HOME fallback below
         // was dead code and this always resolved relative to qs's CWD when
         // XDG_CONFIG_HOME was unset (the CyberOS default). Check truthiness
         // instead. See tests/quickshell.bats "C1" tests.
@@ -46,6 +46,12 @@ Singleton {
             return (c ? c : Quickshell.env("HOME") + "/.config") + "/quickshell/theme.json";
         }
         watchChanges: true
+        // watchChanges only WATCHES: on a disk change FileView emits
+        // fileChanged and leaves re-reading to us. Without this reload() the
+        // shell keeps its login-time palette forever and Super+Shift+T only
+        // re-themes everything except the shell -- found live in the Task 8
+        // VM pass, invisible to every static test.
+        onFileChanged: reload()
         onTextChanged: {
             try {
                 const parsed = JSON.parse(text());

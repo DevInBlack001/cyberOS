@@ -169,3 +169,9 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   [ "$status" -eq 0 ]
   [ -f "$BATS_TEST_TMPDIR/home/.config/quickshell/theme.json" ]
 }
+
+@test "Theme.qml reloads on fileChanged -- watchChanges alone never re-reads" {
+  # Found in the Task 8 VM pass: without onFileChanged: reload() the shell
+  # keeps its login-time palette and the live re-theme contract is dead.
+  grep -q 'onFileChanged: reload()' "$QS/Theme.qml"
+}
