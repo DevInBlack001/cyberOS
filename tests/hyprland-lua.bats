@@ -82,6 +82,24 @@ run_config() { lua -e "dofile('$STUB'); dofile('$HYPR/hyprland.lua'); report()";
   ! grep -q swayosd <<<"$output"
 }
 
+@test "the quickshell layer gets a layer_rule keyed on its own namespace" {
+  run run_config
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"layer_rule ns=quickshell"* ]]
+}
+
+@test "autostart execs qs exactly once; swaybg/nm-applet/blueman-applet/cliphist survive" {
+  run run_config
+  [ "$status" -eq 0 ]
+  n=$(grep -c '^exec qs$' <<<"$output")
+  [ "$n" -eq 1 ]
+  [[ "$output" == *"exec swaybg"* ]]
+  [[ "$output" == *"exec nm-applet"* ]]
+  [[ "$output" == *"exec blueman-applet"* ]]
+  [[ "$output" == *"exec wl-paste --type text --watch cliphist store"* ]]
+  [[ "$output" == *"exec wl-paste --type image --watch cliphist store"* ]]
+}
+
 @test "Super+D opens the quickshell launcher; the other rofi binds survive" {
   run run_config
   [[ "$output" == *"bindcmd SUPER + D :: qs ipc call launcher toggle"* ]]

@@ -36,9 +36,15 @@ Singleton {
     readonly property int radius: 14
 
     FileView {
-        path: Quickshell.env("XDG_CONFIG_HOME") !== ""
-            ? Quickshell.env("XDG_CONFIG_HOME") + "/quickshell/theme.json"
-            : Quickshell.env("HOME") + "/.config/quickshell/theme.json"
+        // Quickshell.env() returns "" for an unset var, never null/undefined
+        // -- a `!== ""` guard is always true, so the $HOME fallback below
+        // was dead code and this always resolved relative to qs's CWD when
+        // XDG_CONFIG_HOME was unset (the CyberOS default). Check truthiness
+        // instead. See tests/quickshell.bats "C1" tests.
+        path: {
+            const c = Quickshell.env("XDG_CONFIG_HOME");
+            return (c ? c : Quickshell.env("HOME") + "/.config") + "/quickshell/theme.json";
+        }
         watchChanges: true
         onTextChanged: {
             try {

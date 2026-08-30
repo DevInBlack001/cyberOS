@@ -12,9 +12,12 @@ RowLayout {
 
     FolderListModel {
         id: widgets
-        folder: "file://" + (Quickshell.env("XDG_CONFIG_HOME") !== ""
-            ? Quickshell.env("XDG_CONFIG_HOME") : Quickshell.env("HOME") + "/.config")
-            + "/quickshell/widgets"
+        // See Theme.qml: Quickshell.env() returns "" (not null) for an
+        // unset var, so `!== ""` is always true -- check truthiness instead.
+        folder: {
+            const c = Quickshell.env("XDG_CONFIG_HOME");
+            return "file://" + (c ? c : Quickshell.env("HOME") + "/.config") + "/quickshell/widgets";
+        }
         nameFilters: ["*.qml"]
         sortField: FolderListModel.Name
         showDirs: false

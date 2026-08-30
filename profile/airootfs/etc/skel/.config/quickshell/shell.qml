@@ -17,6 +17,13 @@ ShellRoot {
 
     // Popup surfaces land here (launcher in a later task). LazyLoader keeps
     // startup cheap and a broken popup from taking the bar down.
+    //
+    // bar/Bar.qml (the power chip), bar/Battery.qml, and the apps chip all
+    // reference `powerMenu`/`launcher` by bare id despite living in
+    // bar/*.qml, not this file -- that resolves (verified at runtime, see
+    // final-fix-report.md) because Bar.Bar is instantiated as a child of
+    // this ShellRoot via the Variants delegate above, which puts every Bar
+    // instance in the same QML object scope as these ids. Not a bug to fix.
     LazyLoader {
         id: powerMenu
         Power.PowerMenu { onCloseRequested: powerMenu.active = false }

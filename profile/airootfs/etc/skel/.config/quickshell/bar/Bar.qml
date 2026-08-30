@@ -33,6 +33,7 @@ PanelWindow {
             spacing: 6
             WidgetHost {}
             Tray {}
+            Brightness {}
             BluetoothChip {}
             Audio {}
             Network {}

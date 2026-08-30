@@ -56,9 +56,22 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
 }
 
 @test "parity: every waybar right-side module has a quickshell counterpart" {
-  for f in Tray.qml BluetoothChip.qml Audio.qml Network.qml SysStats.qml Battery.qml ClockChip.qml; do
+  for f in Tray.qml Brightness.qml BluetoothChip.qml Audio.qml Network.qml SysStats.qml Battery.qml ClockChip.qml; do
     [ -f "$QS/bar/$f" ]
   done
+}
+
+@test "brightness chip: reads brightnessctl, hides with no device, scroll adjusts" {
+  grep -q 'brightnessctl' "$QS/bar/Brightness.qml"
+  grep -q 'hasDevice' "$QS/bar/Brightness.qml"
+  grep -q 'visible: hasDevice' "$QS/bar/Brightness.qml"
+  grep -q 'onScrolled' "$QS/bar/Brightness.qml"
+  grep -q 'execDetached' "$QS/bar/Brightness.qml"
+}
+
+@test "bar: Brightness sits between Tray and BluetoothChip (waybar order)" {
+  awk '/RowLayout {/{f++} f==2 && /Tray|Brightness|BluetoothChip/{print; if (/BluetoothChip/) exit}' "$QS/bar/Bar.qml" \
+    | tr -d ' \t\n' | grep -q 'Tray{}Brightness{}BluetoothChip{}'
 }
 
 @test "power menu replaces the rofi script with the same four actions" {
@@ -125,11 +138,34 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
 
 @test "waybar and swayosd are fully gone; quickshell ships" {
   [ ! -d "$ROOT/profile/airootfs/etc/skel/.config/waybar" ]
-  ! grep -qE '^(waybar|swayosd)$' "$ROOT/profile/airootfs/usr/local/bin/../../../packages.x86_64" 2>/dev/null || true
   ! grep -qE '^waybar$' "$ROOT/profile/packages.x86_64"
   ! grep -qE '^swayosd$' "$ROOT/profile/packages.x86_64"
   grep -qE '^quickshell$' "$ROOT/profile/packages.x86_64"
   grep -q 'exec_cmd("qs")' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
   ! grep -q 'waybar' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
   ! grep -q 'waybar' "$ROOT/profile/airootfs/usr/local/bin/cyberos-theme"
+}
+
+@test "qmldir registers both Theme and OsdState as singletons" {
+  grep -q 'singleton Theme' "$QS/qmldir"
+  grep -q 'singleton OsdState' "$QS/qmldir"
+}
+
+# C1: Quickshell.env() returns "" (empty string), never null/undefined, so a
+# `!== ""` guard is *always* true and the HOME fallback branch is dead code.
+# With XDG_CONFIG_HOME unset (the CyberOS default), Theme.qml and
+# WidgetHost.qml both silently resolved to "" + "/quickshell/..." -- a
+# relative path under the qs process's CWD -- instead of $HOME/.config.
+# bats cannot run qs itself, so this is a static (belt-and-braces) check on
+# top of the live smoke-test verification in the report.
+@test "C1: no XDG_CONFIG_HOME truthiness bug in Theme.qml / WidgetHost.qml" {
+  ! grep -q 'env("XDG_CONFIG_HOME") !== ' "$QS/Theme.qml"
+  ! grep -q 'env("XDG_CONFIG_HOME") !== ' "$QS/bar/WidgetHost.qml"
+}
+
+@test "C1: cyberos-theme writes theme.json under \$HOME/.config with no XDG_CONFIG_HOME" {
+  run env -u XDG_CONFIG_HOME HOME="$BATS_TEST_TMPDIR/home" \
+    bash "$ROOT/profile/airootfs/usr/local/bin/cyberos-theme" dark
+  [ "$status" -eq 0 ]
+  [ -f "$BATS_TEST_TMPDIR/home/.config/quickshell/theme.json" ]
 }
