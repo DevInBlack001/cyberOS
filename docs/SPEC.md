@@ -410,14 +410,14 @@ a known gap rather than an assumed property.
 
 ### 7.2 Required changes
 
-| # | Requirement | Why |
-|---|---|---|
-| S1 | `ufw` MUST be **enabled** on installed systems with `default deny incoming`, `default allow outgoing` | It is currently installed but disabled, which protects nobody. A machine running Metasploit and Docker on a campus network needs a default-deny posture. |
-| S2 | `[cyberos*]` repos MUST use `SigLevel = Required DatabaseRequired TrustedOnly` | Closes §5.5's `TrustAll` gap |
-| S3 | The installer MUST offer **LUKS2 full-disk encryption** | Student laptops are lost and stolen; the machines hold lab material |
-| S4 | `arch-audit` MUST be installed with a weekly timer reporting CVEs against the pinned channel | §4.3 depends on knowing what is vulnerable |
-| S5 | `sbctl` SHOULD be installed and Secure Boot key enrolment documented | Tier 2 machines with SB on are otherwise unbootable |
-| S6 | The live session MUST NOT start `sshd` | Regression guard on 7.1 — the live user has no password |
+| # | Requirement | Why | Status |
+|---|---|---|---|
+| S1 | `ufw` MUST be **enabled** on installed systems with `default deny incoming`, `default allow outgoing` | It is currently installed but disabled, which protects nobody. A machine running Metasploit and Docker on a campus network needs a default-deny posture. | Done -- applied by `cyberos-firstboot` (ufw needs a running kernel, so it can't happen in the installer's chroot) |
+| S2 | `[cyberos*]` repos MUST use `SigLevel = Required DatabaseRequired TrustedOnly` | Closes §5.5's `TrustAll` gap | Done -- `airootfs/etc/pacman.conf`'s `[cyberos]` block |
+| S3 | The installer MUST offer **LUKS2 full-disk encryption** | Student laptops are lost and stolen; the machines hold lab material | Done -- `cyberos-install --encrypt` / the GUI wizard's Encrypt toggle |
+| S4 | `arch-audit` MUST be installed with a weekly timer reporting CVEs against the pinned channel | §4.3 depends on knowing what is vulnerable | Done -- `cyberos-arch-audit.timer`/`.service`, enabled on install |
+| S5 | `sbctl` SHOULD be installed and Secure Boot key enrolment documented | Tier 2 machines with SB on are otherwise unbootable | Partial -- `sbctl` is installed; enrolment itself is one line in the README, not a walkthrough |
+| S6 | The live session MUST NOT start `sshd` | Regression guard on 7.1 — the live user has no password | Done -- guarded by `tests/security.bats` |
 
 ### 7.3 Deliberately rejected
 

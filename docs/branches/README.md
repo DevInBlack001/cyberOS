@@ -21,8 +21,13 @@ branch, add its charter in the same commit as the first piece of work.
 | `main` | protected, releasable | [main.md](main.md) |
 | `installer/gui` | merged (PR #2) | [installer-gui.md](installer-gui.md) |
 | `theme/macos-palette` | merged (PR #3) | [theme-macos-palette.md](theme-macos-palette.md) |
+| `docs/spec` | merged (PR #4) | [docs-spec.md](docs-spec.md) |
+| `theme/foot-portal` | merged (PR #5) | see the "Follow-up work" note in [theme-macos-palette.md](theme-macos-palette.md) — no separate charter was opened for this one |
+| `security/hardening` | merged (PR #6) | [security-hardening.md](security-hardening.md) |
+| `hardware/enablement` | merged (PR #7) | [hardware-enablement.md](hardware-enablement.md) |
+| `theme/lua-config` | merged (PR #8) | see the "Follow-up work" note in [theme-macos-palette.md](theme-macos-palette.md) — no separate charter was opened for this one |
+| `shell/quickshell` | merged (PR #9) | [shell-quickshell.md](shell-quickshell.md) |
 | `packages/repo-publishing` | open, PR #1 closed unmerged | [packages-repo-publishing.md](packages-repo-publishing.md) |
-| `docs/spec` | open | [docs-spec.md](docs-spec.md) |
 
 ## Planned branches
 
@@ -32,8 +37,6 @@ These implement `docs/SPEC.md` and do not exist yet.
 |---|---|---|
 | `channels/release-engineering` | [channels-release-engineering.md](channels-release-engineering.md) | `docs/superpowers/plans/2026-08-30-release-channels.md` |
 | `store/app-market` | [store-app-market.md](store-app-market.md) | `docs/superpowers/plans/2026-08-30-app-store.md` |
-| `hardware/enablement` | [hardware-enablement.md](hardware-enablement.md) | `docs/superpowers/plans/2026-08-30-hardware-security-baseline.md` |
-| `security/hardening` | [security-hardening.md](security-hardening.md) | `docs/superpowers/plans/2026-08-30-hardware-security-baseline.md` |
 | `docs/handbook` | [docs-handbook.md](docs-handbook.md) | — |
 
 ## Naming reference

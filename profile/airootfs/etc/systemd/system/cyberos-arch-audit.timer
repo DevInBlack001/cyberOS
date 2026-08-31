@@ -1,0 +1,12 @@
+[Unit]
+Description=Weekly CVE audit of installed packages (docs/SPEC.md S4)
+
+[Timer]
+OnCalendar=weekly
+# A machine that's off during the scheduled slot (the common case for a
+# student laptop) still gets audited, at next boot instead of missed entirely.
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target
