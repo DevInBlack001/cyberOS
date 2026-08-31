@@ -106,7 +106,10 @@ QMLDIRS=/tmp/claude-1000/-home-edbron-Work/9fdca27c-4540-4321-9795-683d0bdd0a18/
   for f in --disk --user --hostname --tz --fs --swap --format-efi --alongside --erase --encrypt; do
     grep -qF "\"$f\"" "$INST/WizState.qml"
   done
-  ! grep -rn 'password' "$INST/WizState.qml" | grep -iE 'argv|command' | grep -v stdin
+  # Secrets-never-in-argv is asserted properly (awk-scoped, not a bare `!`
+  # mid-body no-op like this test used to have here) by "WizState.argv
+  # builds sudo -n cyberos-install with mode args and secrets are isolated"
+  # below -- I3.
   ! grep -rn 'sh", "-c' "$INST"
 }
 
@@ -149,4 +152,11 @@ QMLDIRS=/tmp/claude-1000/-home-edbron-Work/9fdca27c-4540-4321-9795-683d0bdd0a18/
 @test "pages qmldir lists ConfirmPage and InstallPage" {
   grep -q 'ConfirmPage' "$INST/pages/qmldir"
   grep -q 'InstallPage' "$INST/pages/qmldir"
+}
+
+@test "shell.qml pins the archiso guard command and its tri-state" {
+  grep -qF '"test", "-d", "/run/archiso"' "$INST/shell.qml"
+  grep -qF '"checking"' "$INST/shell.qml"
+  grep -qF '"ok"' "$INST/shell.qml"
+  grep -qF '"blocked"' "$INST/shell.qml"
 }
