@@ -1,6 +1,6 @@
 # Branch: `shell/quickshell`
 
-**State:** verified in the VM, awaiting merge · **Owner:** @edbron
+**State:** merged into `main` via PR #9 · **Owner:** @edbron
 **Spec:** `docs/superpowers/specs/2026-08-30-quickshell-shell.md` · **Plan:** `docs/superpowers/plans/2026-08-30-quickshell-shell.md`
 
 ## Charter

@@ -6,6 +6,11 @@
 #
 #  Signing:   --sign-key <KEYID>  sign the [cyberos] repo; required for release builds
 #
+#  work/ (AUR build trees + mkarchiso's scratch dir) is the biggest thing this
+#  leaves on disk -- a full AUR set can run several GB. On success you're asked
+#  whether to delete it; --keep-work/--purge-work skip that prompt (e.g. CI).
+#  repo/ (the finished packages) and out/ (the ISO) are never touched by this.
+#
 #  Requirements (on an Arch host):  sudo pacman -S archiso base-devel git
 #  Packet Tracer: drop CiscoPacketTracer_*_Ubuntu_64bit.deb (from netacad.com) into aur/
 # ============================================================================
@@ -16,13 +21,15 @@ REPO="$ROOT/repo"; WORK="$ROOT/work"; OUT="$ROOT/out"; PROFILE="$ROOT/profile"
 msg() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 die() { echo "ERROR: $*" >&2; exit 1; }
 
-SKIP_AUR=0; ONLY_AUR=0; SIGN_KEY=
+SKIP_AUR=0; ONLY_AUR=0; SIGN_KEY=; KEEP_WORK=
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --skip-aur) SKIP_AUR=1; shift;;
-    --only-aur) ONLY_AUR=1; shift;;
-    --clean)    sudo rm -rf "$WORK"; shift;;
-    --sign-key) SIGN_KEY=${2:-}; shift 2;;
+    --skip-aur)   SKIP_AUR=1; shift;;
+    --only-aur)   ONLY_AUR=1; shift;;
+    --clean)      sudo rm -rf "$WORK"; shift;;
+    --keep-work)  KEEP_WORK=1; shift;;
+    --purge-work) KEEP_WORK=0; shift;;
+    --sign-key)   SIGN_KEY=${2:-}; shift 2;;
     # Print the whole leading comment block, so help cannot drift out of sync
     # with the header the way a hardcoded line range does.
     -h|--help)  awk 'NR>1 && /^#/ {print; next} NR>1 {exit}' "$0"; exit 0;;
@@ -122,3 +129,26 @@ sudo chown "$USER:$USER" "$OUT"/*.iso
 msg "ISO ready:"; ls -lh "$OUT"/*.iso
 ISO=$(ls -t "$OUT"/*.iso | head -1)
 echo "Test it:  ./test-vm.sh $ISO"
+
+# ------------------------------------------------------------------ 3. work/ cleanup
+# work/aur holds each AUR package's git clone plus its src/ and pkg/ build trees
+# (kept so a rebuild can skip re-downloading/recompiling -- onlyoffice-bin and
+# vscode-bin alone can be several GB); work/iso is mkarchiso's own scratch tree.
+# Neither is needed once repo/ has the finished packages and out/ has the ISO,
+# but keeping them makes the next build much faster, so ask rather than assume.
+if [[ -d $WORK ]]; then
+  SIZE=$(sudo du -sh "$WORK" 2>/dev/null | cut -f1)
+  if [[ -z $KEEP_WORK ]]; then
+    if [[ -t 0 ]]; then
+      read -rp "Delete build/work directory ($WORK, $SIZE -- next build re-downloads/recompiles any AUR packages)? [y/N] " reply
+      [[ $reply =~ ^[Yy] ]] && KEEP_WORK=0 || KEEP_WORK=1
+    else
+      msg "Non-interactive: keeping $WORK ($SIZE). Pass --purge-work to delete it automatically."
+      KEEP_WORK=1
+    fi
+  fi
+  if [[ $KEEP_WORK -eq 0 ]]; then
+    msg "Removing $WORK"
+    sudo rm -rf "$WORK"
+  fi
+fi

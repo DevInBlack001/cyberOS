@@ -181,3 +181,13 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   [ -f "$f" ]
   grep -q '^NoDisplay=true' "$f"
 }
+
+# Security: Text's default textFormat (AutoText) auto-detects and renders
+# HTML-like content. BarModule's label carries MPRIS track metadata and
+# WindowTitle carries a window's own title -- both set by something this
+# desktop does not control -- so either could otherwise inject markup into
+# the system bar.
+@test "bar chip label/icon and the window title are rendered as plain text" {
+  grep -q 'textFormat: Text.PlainText' "$QS/bar/WindowTitle.qml"
+  awk '/text: chip\.label/,/^ *}/' "$QS/bar/BarModule.qml" | grep -q 'textFormat: Text.PlainText'
+}

@@ -21,9 +21,15 @@ Rectangle {
         anchors.centerIn: parent
         spacing: 5
         Text { text: chip.icon; visible: chip.icon !== ""
+               textFormat: Text.PlainText
                color: chip.iconColor
                font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize } }
         Text { text: chip.label; visible: chip.label !== ""
+               // chip.label can carry data this desktop does not control (MPRIS
+               // track metadata today; any future chip could add more). Text's
+               // default textFormat auto-detects and renders HTML-like content,
+               // so a crafted title could otherwise inject markup into the bar.
+               textFormat: Text.PlainText
                color: chip.labelColor
                font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize } }
     }
