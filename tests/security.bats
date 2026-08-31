@@ -58,3 +58,14 @@ setup() {
   run firewall_rules
   ! [[ "$output" == *"reset"* ]]
 }
+
+@test "--user/--password/--root-password cannot inject shell syntax into the chroot handoff" {
+  # A crafted --user (or --password) containing a quote/backtick/$(...) used to
+  # become literal shell syntax inside arch-chroot's bash, because the heredoc
+  # that hands the installer's state to the chroot was unquoted and expanded
+  # by the host shell. Two independent guards now cover this: the heredoc is
+  # quoted (tested in install-boot.bats), and valid_username rejects anything
+  # outside useradd's own character set before it gets that far.
+  run valid_username 'x"; touch /tmp/PWNED; echo "'
+  [ "$status" -ne 0 ]
+}

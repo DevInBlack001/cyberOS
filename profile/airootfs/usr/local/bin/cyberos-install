@@ -30,7 +30,7 @@ fi
 
 DISK="" MODE="" ROOTP="" EFIP="" HOMEP="" FORMAT_EFI=0 FORMAT_HOME=0
 HOSTNAME_="cyberos" USER_="student" PASS="" ROOTPASS="" TZ_="UTC" FS="ext4" YES=0 SWAP_GB=4
-ENCRYPT=0 LUKSPASS="" LUKS_UUID=""
+ENCRYPT=0 LUKSPASS="" LUKS_UUID="" PASS_FROM_ARGV=0
 
 usage() { sed -n '3,17p' "$0"; exit 1; }
 die()   { echo "ERROR: $*" >&2; exit 1; }
@@ -184,6 +184,22 @@ luks_cmdline() {
   fi
 }
 
+# valid_username <name> -- the set useradd itself accepts.
+#
+# USER_ is later expanded into useradd/chpasswd inside the chroot heredoc; a
+# name outside this set is refused up front rather than relying on the heredoc
+# quoting alone to make it merely inert.
+valid_username() {
+  [[ $1 =~ ^[a-z_][a-z0-9_-]*$ ]]
+}
+
+# valid_luks_passphrase <pass> -- the GUI enforces 8+ chars; unattended/CLI use
+# (--encrypt --password-stdin) MUST too, since it is the only thing protecting
+# the disk and a client-side-only check is not a check.
+valid_luks_passphrase() {
+  [[ ${#1} -ge 8 ]]
+}
+
 # Everything below this point touches disks. Stop here when sourced for tests.
 if [[ -n ${CYBEROS_INSTALL_LIB_ONLY:-} ]]; then
   return 0 2>/dev/null || exit 0
@@ -197,7 +213,7 @@ while [[ $# -gt 0 ]]; do
     --root) ROOTP=$2; MODE=manual; shift 2;;
     --efi) EFIP=$2; shift 2;;       --format-efi) FORMAT_EFI=1; shift;;
     --home) HOMEP=$2; shift 2;;     --format-home) FORMAT_HOME=1; shift;;
-    --user) USER_=$2; shift 2;;     --password) PASS=$2; shift 2;;
+    --user) USER_=$2; shift 2;;     --password) PASS=$2; PASS_FROM_ARGV=1; shift 2;;
     # Read passwords from stdin instead of argv, which is world-readable
     # in /proc: line 1 is the user password, an optional line 2 is root's.
     # Line 1 user password, optional line 2 root's, optional line 3 the LUKS
@@ -335,6 +351,13 @@ fi
 ROOTPASS=${ROOTPASS:-$PASS}
 [[ -f /usr/share/zoneinfo/$TZ_ ]] || die "unknown timezone $TZ_"
 [[ $FS == ext4 || $FS == btrfs ]] || die "filesystem must be ext4 or btrfs"
+valid_username "$USER_" || die "--user must match [a-z_][a-z0-9_-]* (got: $USER_)"
+if [[ $PASS_FROM_ARGV -eq 1 ]]; then
+  echo "WARNING: --password puts the password in argv, readable via /proc/*/cmdline by any local user. Prefer --password-stdin." >&2
+fi
+if [[ $ENCRYPT -eq 1 && -n $LUKSPASS ]] && ! valid_luks_passphrase "$LUKSPASS"; then
+  die "--encrypt passphrase must be at least 8 characters -- it is the only thing protecting the disk"
+fi
 
 # ---------------------------------------------------------------- partition (erase mode)
 swapoff -a 2>/dev/null || true
@@ -517,14 +540,22 @@ else
 fi
 
 msg "Finalising inside chroot"
-arch-chroot /mnt /bin/bash -e <<CH
-ln -sf /usr/share/zoneinfo/$TZ_ /etc/localtime
+# The heredoc delimiter is QUOTED ('CH'): the outer shell (running as root on
+# the live medium) must not expand $USER_/$PASS/$ROOTPASS into this script's
+# source text, or a value containing a quote, backtick or $(...) becomes shell
+# syntax that runs inside the chroot. Tainted values cross into the chroot as
+# real environment variables instead, via `env`, and are expanded safely at
+# runtime by the chroot's own bash.
+arch-chroot /mnt /usr/bin/env \
+  TZ_="$TZ_" USER_="$USER_" PASS="$PASS" ROOTPASS="$ROOTPASS" DISK="$DISK" UEFI="$UEFI" \
+  /bin/bash -e <<'CH'
+ln -sf "/usr/share/zoneinfo/$TZ_" /etc/localtime
 hwclock --systohc || true
 
 # users
 if [[ "$USER_" != "student" ]]; then
   useradd -m -G wheel,adm,uucp,audio,video,input,storage,vboxusers,wireshark -s /usr/bin/zsh "$USER_"
-  cp -rT /etc/skel /home/$USER_ && chown -R $USER_:$USER_ /home/$USER_
+  cp -rT /etc/skel "/home/$USER_" && chown -R "$USER_:$USER_" "/home/$USER_"
   userdel -r student 2>/dev/null || true
 fi
 echo "$USER_:$PASS" | chpasswd

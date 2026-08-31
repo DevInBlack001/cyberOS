@@ -70,3 +70,48 @@ setup() {
   run grep -c 'GRUB_TOP_LEVEL=/boot/vmlinuz-linux' "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-install"
   [ "$output" -ge 1 ]
 }
+
+@test "valid_username accepts what useradd accepts" {
+  run valid_username "student"
+  [ "$status" -eq 0 ]
+  run valid_username "lab-07"
+  [ "$status" -eq 0 ]
+}
+
+@test "valid_username rejects a value crafted to break out of the chroot heredoc" {
+  run valid_username 'x"; touch /tmp/PWNED; echo "'
+  [ "$status" -ne 0 ]
+}
+
+@test "valid_username rejects uppercase and leading digits" {
+  run valid_username "Bob"
+  [ "$status" -ne 0 ]
+  run valid_username "1student"
+  [ "$status" -ne 0 ]
+}
+
+@test "valid_luks_passphrase enforces the 8-character floor the GUI also enforces" {
+  run valid_luks_passphrase "short"
+  [ "$status" -ne 0 ]
+  run valid_luks_passphrase "longenough1"
+  [ "$status" -eq 0 ]
+}
+
+@test "the chroot handoff heredoc is quoted so USER_/PASS/ROOTPASS cannot inject shell syntax" {
+  # Regression guard for the injection fixed in this change: an unquoted <<CH
+  # heredoc lets the outer (host, root) shell expand --user/--password into
+  # the script text handed to arch-chroot's bash, so a value containing a
+  # quote or $(...) becomes shell syntax that runs inside the chroot.
+  run grep -n "bin/bash -e <<'CH'" "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-install"
+  [ "$status" -eq 0 ]
+  run grep -n "bin/bash -e <<CH$" "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-install"
+  [ "$status" -ne 0 ]
+}
+
+@test "USER_/PASS/ROOTPASS/TZ_/DISK/UEFI reach the chroot via env, not host-side interpolation" {
+  run grep -A2 'arch-chroot /mnt /usr/bin/env' "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-install"
+  [ "$status" -eq 0 ]
+  for var in TZ_ USER_ PASS= ROOTPASS DISK UEFI; do
+    [[ "$output" == *"$var"* ]]
+  done
+}
