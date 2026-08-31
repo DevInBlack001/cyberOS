@@ -33,3 +33,21 @@ QMLDIRS=/tmp/claude-1000/-home-edbron-Work/9fdca27c-4540-4321-9795-683d0bdd0a18/
   grep -q 'timedatectl' "$INST/Probe.qml"
   grep -qE 'PKNAME' "$INST/Probe.qml"
 }
+
+@test "mode page ports the three modes and the 25 GiB gate" {
+  for s in 'Install alongside' 'Erase the whole disk' 'Custom partitioning' '25' 'gparted' 'will be destroyed'; do
+    grep -qF "$s" "$INST/pages/ModePage.qml"
+  done
+}
+
+@test "disk page ports title, subtitle and the no-disks fallback verbatim" {
+  grep -qF 'Choose a disk' "$INST/pages/DiskPage.qml"
+  grep -qF 'The entire disk will be erased' "$INST/pages/DiskPage.qml"
+  grep -qF 'no disks found' "$INST/pages/DiskPage.qml"
+}
+
+@test "WizState carries disk, mode default and freeGib" {
+  grep -q 'property string disk' "$INST/WizState.qml"
+  grep -q 'property string mode: "erase"' "$INST/WizState.qml"
+  grep -q 'property int freeGib' "$INST/WizState.qml"
+}
