@@ -39,6 +39,7 @@ PanelWindow {
             Network {}
             SysStats {}
             Battery {}
+            NotifyChip {}
             ClockChip {}
             BarModule { icon: "\uf011"; onClicked: powerMenu.activeAsync = true }
         }

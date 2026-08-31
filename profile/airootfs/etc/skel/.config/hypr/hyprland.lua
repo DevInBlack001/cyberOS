@@ -26,7 +26,6 @@ local editor   = "code"
 hl.on("hyprland.start", function()
   hl.exec_cmd("swaybg -i /usr/share/backgrounds/cyberos/wallpaper.png -m fill")
   hl.exec_cmd("qs")
-  hl.exec_cmd("mako")
   hl.exec_cmd("hypridle")
   hl.exec_cmd("systemctl --user start hyprpolkitagent")
   hl.exec_cmd("nm-applet --indicator")

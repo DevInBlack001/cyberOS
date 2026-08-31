@@ -35,11 +35,11 @@ run_config() { lua -e "dofile('$STUB'); dofile('$HYPR/hyprland.lua'); report()";
   [ "$n" -ge 60 ]
 }
 
-@test "autostart launches the bar, notifications and idle daemon" {
+@test "autostart launches the bar (notifications now live inside it) and idle daemon" {
   run run_config
   [[ "$output" == *"exec qs"* ]]
-  [[ "$output" == *"exec mako"* ]]
   [[ "$output" == *"exec hypridle"* ]]
+  ! grep -q 'exec mako' <<<"$output"
 }
 
 @test "border colours come from theme.lua, not from the config" {

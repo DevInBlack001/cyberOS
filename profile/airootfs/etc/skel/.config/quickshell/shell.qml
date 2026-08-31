@@ -3,13 +3,27 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Pipewire
+import Quickshell.Services.Notifications
 import "." as Cyber
 import "bar" as Bar
 import "power" as Power
 import "launcher" as Launcher
 import "osd" as Osd
+import "notify" as Notify
 
 ShellRoot {
+    id: shell
+
+    // Do-not-disturb: flipped by `qs ipc call notify dnd` and by clicking
+    // bar/NotifyChip.qml. Named distinctly from the IpcHandler's `dnd()`
+    // function below on purpose -- that function and this property would
+    // otherwise share the identifier "dnd" on two different QML objects
+    // (ShellRoot vs. the nested IpcHandler), and a bare `dnd` reference
+    // written *inside* the function would resolve to the function itself
+    // (the nearest scope), not this property. Qualifying every write/read
+    // as `shell.dnd` sidesteps that ambiguity entirely.
+    property bool dnd: false
+
     Variants {
         model: Quickshell.screens
         delegate: Bar.Bar { required property var modelData; screen: modelData }
@@ -33,6 +47,47 @@ ShellRoot {
         Launcher.Launcher { onCloseRequested: launcher.active = false }
     }
     LazyLoader { id: osd; Osd.Osd {} }
+
+    // Replaces mako. actionsSupported/imageSupported/bodySupported tell the
+    // sending client (via GetCapabilities) that this server can render
+    // those fields -- without them some apps degrade their notifications
+    // (e.g. drop the body). keepOnReload survives a qs config reload
+    // (Super+Shift+R) without dropping notifications live on screen.
+    //
+    // Tracking idiom (verified against quickshell-service-notifications.
+    // qmltypes): NotificationServerQml does NOT auto-track anything --
+    // `trackedNotifications` only ever contains notifications whose own
+    // `tracked` property (read isTracked/write setTracked, both present in
+    // the qmltypes) has been explicitly set true. The `notification` signal
+    // hands over the freshly-arrived Notification; setting `.tracked = true`
+    // on it in the handler is the only thing that makes it show up in
+    // `trackedNotifications.values` for NotifyPopups.qml to render.
+    NotificationServer {
+        id: notifServer
+        keepOnReload: true
+        actionsSupported: true
+        imageSupported: true
+        bodySupported: true
+        onNotification: notification => notification.tracked = true
+    }
+
+    // Always active (not toggled like the popups above): notifications can
+    // arrive at any time, so the panel must be ready from login -- it stays
+    // invisible on its own (NotifyPopups.qml's `visible` binding) whenever
+    // there is nothing tracked or DND is on, so there is no idle-surface
+    // cost to keeping it loaded.
+    LazyLoader {
+        id: notifyPopups
+        active: true
+        Notify.NotifyPopups { server: notifServer; dnd: shell.dnd }
+    }
+
+    // `qs ipc call notify dnd` -- replaces mako's own notification pipeline;
+    // toggles do-not-disturb (see bar/NotifyChip.qml for the bar-side toggle).
+    IpcHandler {
+        target: "notify"
+        function dnd(): void { shell.dnd = !shell.dnd; }
+    }
 
     // `qs ipc call power toggle` opens the menu if closed, closes it if open.
     IpcHandler {
