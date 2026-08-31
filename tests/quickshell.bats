@@ -109,7 +109,7 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   grep -q '"launcher"' "$QS/shell.qml"
   grep -q 'qs ipc call launcher toggle' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
   ! grep -q 'rofi -show drun' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
-  grep -q 'rofi -show emoji' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"  # rofi stays for the rest
+  grep -q 'rofi -show calc' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"  # rofi stays for calc/clip until later tasks
 }
 
 @test "launcher: centred focusable panel, GridView + filter, noDisplay excluded" {

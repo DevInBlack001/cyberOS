@@ -51,6 +51,10 @@ ShellRoot {
         id: winswitch
         Popups.WinSwitch { onCloseRequested: winswitch.active = false }
     }
+    LazyLoader {
+        id: emoji
+        Popups.EmojiPicker { onCloseRequested: emoji.active = false }
+    }
     LazyLoader { id: osd; Osd.Osd {} }
 
     // Replaces mako. actionsSupported/imageSupported/bodySupported tell the
@@ -115,6 +119,14 @@ ShellRoot {
         target: "winswitch"
         function toggle(): void {
             winswitch.activeAsync ? winswitch.active = false : winswitch.activeAsync = true
+        }
+    }
+
+    // `qs ipc call emoji toggle` -- replaces `rofi -show emoji`.
+    IpcHandler {
+        target: "emoji"
+        function toggle(): void {
+            emoji.activeAsync ? emoji.active = false : emoji.activeAsync = true
         }
     }
 

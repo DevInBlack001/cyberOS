@@ -120,14 +120,83 @@ run_hypr_config() {
   ! grep -rq 'rofi -show window' "$HYPR/hyprland.lua"
 }
 
-@test "the other rofi binds (period/equal/X) are untouched by the Tab swap" {
+@test "the other rofi binds (equal/X) are untouched by the Tab swap" {
   run run_hypr_config
   [ "$status" -eq 0 ]
-  [[ "$output" == *"bindcmd SUPER + period :: rofi -show emoji"* ]]
   [[ "$output" == *"bindcmd SUPER + equal :: rofi -show calc -no-show-match -no-sort"* ]]
   [[ "$output" == *"bindcmd SUPER + X :: cliphist list | rofi -dmenu -p clipboard | cliphist decode | wl-copy"* ]]
 }
 
 @test "no raw PUA glyph bytes in popups/ (escapes only)" {
   ! grep -rlP '[\x{E000}-\x{F8FF}\x{F0000}-\x{FFFFD}]' "$QS/popups" --include='*.qml'
+}
+
+# Task 3: QML emoji picker (Super+period) replaces `rofi -show emoji`; data
+# vendored once from rofi-emoji's all_emojis.txt.
+
+@test "emoji.txt is vendored, non-empty, and carries a CC-BY-4.0 attribution header" {
+  [ -s "$QS/emoji.txt" ]
+  grep -qE '^# ' "$QS/emoji.txt"
+  grep -qi 'rofi-emoji' "$QS/emoji.txt"
+  grep -qi 'CC-BY-4.0' "$QS/emoji.txt"
+  grep -qi 'unicode' "$QS/emoji.txt"
+  # real, literal UTF-8 emoji glyphs -- not \uXXXX-escaped (R-s1): every
+  # non-comment line's first byte sequence must NOT be a literal backslash-u.
+  ! grep -qE '^\\u' "$QS/emoji.txt"
+  # more than a token handful of entries
+  n=$(grep -vcE '^#' "$QS/emoji.txt")
+  [ "$n" -gt 1000 ]
+}
+
+@test "EmojiPicker.qml exists and reads emoji.txt via FileView" {
+  [ -f "$QS/popups/EmojiPicker.qml" ]
+  grep -q 'FileView' "$QS/popups/EmojiPicker.qml"
+  grep -q 'emoji.txt' "$QS/popups/EmojiPicker.qml"
+}
+
+@test "EmojiPicker: GridView, ScriptModel identity, filter, copy via wl-copy stdin" {
+  grep -q 'PanelWindow' "$QS/popups/EmojiPicker.qml"
+  grep -q 'GridView' "$QS/popups/EmojiPicker.qml"
+  grep -q 'ScriptModel' "$QS/popups/EmojiPicker.qml"
+  grep -q 'ObjectComparison.Identity' "$QS/popups/EmojiPicker.qml"
+  grep -qE 'columns:\s*8' "$QS/popups/EmojiPicker.qml"
+  grep -q '"wl-copy"' "$QS/popups/EmojiPicker.qml"
+  grep -q '\.write(' "$QS/popups/EmojiPicker.qml"
+  grep -q 'stdinEnabled = false' "$QS/popups/EmojiPicker.qml"
+  grep -q 'Qt.Key_Return' "$QS/popups/EmojiPicker.qml"
+  grep -q 'Qt.Key_Escape' "$QS/popups/EmojiPicker.qml"
+  grep -q 'closeRequested' "$QS/popups/EmojiPicker.qml"
+}
+
+@test "EmojiPicker: comment-skip does not swallow the '#'-prefixed keycap emoji rows" {
+  # emoji.txt has two rows whose glyph itself starts with the literal '#'
+  # character (the keycap sequences): "#️⃣ keycap: # ..." and "#⃣ keycap: # ...".
+  # A parser that treats every line[0] === '#' as a comment would silently
+  # drop both from the picker. The fix checks the SECOND character is
+  # whitespace too (comment headers are always "# text"; the keycap glyphs'
+  # second codepoint is a variation selector / combining mark, never a
+  # space) -- assert that check is actually present in the source.
+  grep -qE 'line\[1\]' "$QS/popups/EmojiPicker.qml"
+  grep -q '#️⃣' "$QS/emoji.txt"
+  grep -q '#⃣ ' "$QS/emoji.txt"
+}
+
+@test "shell.qml: emoji LazyLoader + IpcHandler mirror the launcher's toggle shape" {
+  grep -q 'id: emoji' "$QS/shell.qml"
+  grep -q 'target: "emoji"' "$QS/shell.qml"
+  grep -q 'onCloseRequested: emoji.active = false' "$QS/shell.qml"
+}
+
+@test "Super+period dispatches the quickshell emoji picker, rofi -show emoji is gone" {
+  run run_hypr_config
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"bindcmd SUPER + period :: qs ipc call emoji toggle"* ]]
+  ! grep -q 'rofi -show emoji' <<<"$output"
+  ! grep -rq 'rofi -show emoji' "$HYPR/hyprland.lua"
+}
+
+@test "rofi-emoji is gone from packages; rofi and rofi-calc still present" {
+  ! grep -qE '^rofi-emoji$' "$ROOT/profile/packages.x86_64"
+  grep -qE '^rofi$' "$ROOT/profile/packages.x86_64"
+  grep -qE '^rofi-calc$' "$ROOT/profile/packages.x86_64"
 }
