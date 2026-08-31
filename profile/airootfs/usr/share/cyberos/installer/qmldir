@@ -1,2 +1,3 @@
+singleton Probe Probe.qml
 singleton Theme Theme.qml
 singleton WizState WizState.qml

@@ -24,3 +24,12 @@ QMLDIRS=/tmp/claude-1000/-home-edbron-Work/9fdca27c-4540-4321-9795-683d0bdd0a18/
 @test "env guard uses truthiness, never !== empty-string" {
   ! grep -rn 'env("[A-Z_]*") !==' "$INST"
 }
+
+@test "probe ports the exact exclusion and commands" {
+  grep -q 'zram|loop|ram|sr|fd' "$INST/Probe.qml"
+  grep -q 'lsblk.*-dnpo.*NAME,SIZE,TYPE,MODEL' "$INST/Probe.qml"
+  grep -q 'findmnt.*-no.*SOURCE.*/run/archiso/bootmnt' "$INST/Probe.qml"
+  grep -q 'sgdisk' "$INST/Probe.qml"
+  grep -q 'timedatectl' "$INST/Probe.qml"
+  grep -qE 'PKNAME' "$INST/Probe.qml"
+}
