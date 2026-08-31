@@ -26,7 +26,6 @@ local editor   = "code"
 hl.on("hyprland.start", function()
   hl.exec_cmd("swaybg -i /usr/share/backgrounds/cyberos/wallpaper.png -m fill")
   hl.exec_cmd("qs")
-  hl.exec_cmd("mako")
   hl.exec_cmd("hypridle")
   hl.exec_cmd("systemctl --user start hyprpolkitagent")
   hl.exec_cmd("nm-applet --indicator")
@@ -109,9 +108,9 @@ local mod = "SUPER"
 hl.bind(mod .. " + Return", hl.dsp.exec_cmd(terminal))
 hl.bind(mod .. " + D",      hl.dsp.exec_cmd("qs ipc call launcher toggle"))
 hl.bind(mod .. " + I",      hl.dsp.exec_cmd("gtk-launch cyberos-install"))
-hl.bind(mod .. " + Tab",    hl.dsp.exec_cmd("rofi -show window"))
-hl.bind(mod .. " + period", hl.dsp.exec_cmd("rofi -show emoji"))
-hl.bind(mod .. " + equal",  hl.dsp.exec_cmd("rofi -show calc -no-show-match -no-sort"))
+hl.bind(mod .. " + Tab",    hl.dsp.exec_cmd("qs ipc call winswitch toggle"))
+hl.bind(mod .. " + period", hl.dsp.exec_cmd("qs ipc call emoji toggle"))
+hl.bind(mod .. " + equal",  hl.dsp.exec_cmd("qs ipc call calc toggle"))
 hl.bind(mod .. " + B",      hl.dsp.exec_cmd(browser))
 hl.bind(mod .. " + E",      hl.dsp.exec_cmd(files))
 hl.bind(mod .. " + C",      hl.dsp.exec_cmd(editor))
@@ -124,7 +123,7 @@ hl.bind(mod .. " + Escape", hl.dsp.exec_cmd("hyprlock"))
 hl.bind(mod .. " + SHIFT + E", hl.dsp.exit())
 hl.bind(mod .. " + SHIFT + R", hl.dsp.exec_cmd("hyprctl reload"))
 hl.bind(mod .. " + SHIFT + T", hl.dsp.exec_cmd("cyberos-theme toggle"))
-hl.bind(mod .. " + X", hl.dsp.exec_cmd("cliphist list | rofi -dmenu -p clipboard | cliphist decode | wl-copy"))
+hl.bind(mod .. " + X", hl.dsp.exec_cmd("qs ipc call clip toggle"))
 
 -- screenshots
 hl.bind("Print",         hl.dsp.exec_cmd('grim -g "$(slurp)" - | wl-copy'))
@@ -170,8 +169,8 @@ hl.window_rule({ name = "float-pip",  match = { title = "^(Picture-in-Picture)$"
 hl.window_rule({ name = "float-vbox", match = { class = "^(VirtualBox Machine)$" }, float = true })
 hl.window_rule({ name = "suppress-maximize", match = { class = ".*" }, suppress_event = "maximize" })
 
--- blur the floating bar/launcher/OSD/power-menu (all Quickshell surfaces share
--- the "quickshell" layer namespace) and the remaining rofi menus
--- (window/emoji/calc/clipboard -- drun is gone, replaced by the quickshell launcher)
+-- blur the floating bar/launcher/OSD/power-menu/window-switcher/emoji-picker/
+-- calculator/clipboard-history (all Quickshell surfaces share the
+-- "quickshell" layer namespace -- drun, window, emoji, calc and clipboard
+-- are all quickshell now, rofi is gone).
 hl.layer_rule({ match = { namespace = "quickshell" }, blur = true, ignore_alpha = 0.3 })
-hl.layer_rule({ match = { namespace = "rofi" },       blur = true })

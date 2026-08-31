@@ -16,8 +16,9 @@ setup() {
 
 @test "the firewall does not open any port by default" {
   run firewall_rules
-  ! [[ "$output" == *"allow 22"* ]]
-  ! [[ "$output" == *"allow ssh"* ]]
+  # merged into one condition (sole/last statement) -- a mid-body "!" is
+  # exempt from errexit and would be silently swallowed by the later check.
+  ! [[ "$output" == *"allow 22"* || "$output" == *"allow ssh"* ]]
 }
 
 @test "sshd is not enabled in the live image" {
@@ -54,7 +55,10 @@ setup() {
 }
 
 @test "first boot never resets ufw (it deletes the shipped rules under a starting service)" {
-  ! grep -qE '^\s*ufw (--force )?reset' "$ROOT/profile/airootfs/usr/local/bin/cyberos-firstboot"
+  # run-wrapped: a mid-body "!" is exempt from errexit and would be silently
+  # swallowed by the "run firewall_rules" that follows.
+  run grep -qE '^\s*ufw (--force )?reset' "$ROOT/profile/airootfs/usr/local/bin/cyberos-firstboot"
+  [ "$status" -ne 0 ]
   run firewall_rules
   ! [[ "$output" == *"reset"* ]]
 }

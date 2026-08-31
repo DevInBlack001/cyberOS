@@ -1,6 +1,6 @@
 # Thunar pulls in libxfce4ui, which ships an "About Xfce" launcher entry even
 # though CyberOS has no Xfce desktop. XDG precedence: this per-user override
-# hides it from the launcher and rofi without touching the package.
+# hides it from the launcher without touching the package.
 [Desktop Entry]
 Type=Application
 Name=About Xfce

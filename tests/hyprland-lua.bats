@@ -35,11 +35,11 @@ run_config() { lua -e "dofile('$STUB'); dofile('$HYPR/hyprland.lua'); report()";
   [ "$n" -ge 60 ]
 }
 
-@test "autostart launches the bar, notifications and idle daemon" {
+@test "autostart launches the bar (notifications now live inside it) and idle daemon" {
   run run_config
   [[ "$output" == *"exec qs"* ]]
-  [[ "$output" == *"exec mako"* ]]
   [[ "$output" == *"exec hypridle"* ]]
+  ! grep -q 'exec mako' <<<"$output"
 }
 
 @test "border colours come from theme.lua, not from the config" {
@@ -100,12 +100,24 @@ run_config() { lua -e "dofile('$STUB'); dofile('$HYPR/hyprland.lua'); report()";
   [[ "$output" == *"exec wl-paste --type image --watch cliphist store"* ]]
 }
 
-@test "Super+D opens the quickshell launcher; the other rofi binds survive" {
+@test "Super+D opens the quickshell launcher" {
   run run_config
   [[ "$output" == *"bindcmd SUPER + D :: qs ipc call launcher toggle"* ]]
   ! grep -q 'bindcmd SUPER + D :: rofi' <<<"$output"
-  [[ "$output" == *"bindcmd SUPER + Tab :: rofi -show window"* ]]
-  [[ "$output" == *"bindcmd SUPER + period :: rofi -show emoji"* ]]
-  [[ "$output" == *"bindcmd SUPER + equal :: rofi -show calc -no-show-match -no-sort"* ]]
-  [[ "$output" == *"bindcmd SUPER + X :: cliphist list | rofi -dmenu -p clipboard | cliphist decode | wl-copy"* ]]
+}
+
+@test "Super+equal opens the quickshell calc, Super+X opens the quickshell clip history (Task 4)" {
+  run run_config
+  [[ "$output" == *"bindcmd SUPER + equal :: qs ipc call calc toggle"* ]]
+  [[ "$output" == *"bindcmd SUPER + X :: qs ipc call clip toggle"* ]]
+  # merged into one alternation so the negated check is the sole/last
+  # statement -- a mid-body "!" is exempt from errexit and would be
+  # silently swallowed by a later passing statement otherwise.
+  ! grep -qE 'rofi -show calc|rofi -dmenu' <<<"$output"
+}
+
+@test "Super+period opens the quickshell emoji picker; rofi -show emoji is gone" {
+  run run_config
+  [[ "$output" == *"bindcmd SUPER + period :: qs ipc call emoji toggle"* ]]
+  ! grep -q 'bindcmd SUPER + period :: rofi' <<<"$output"
 }

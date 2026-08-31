@@ -119,14 +119,14 @@ xdg-desktop-portal-hyprland
 xdg-desktop-portal-gtk
 xdg-user-dirs
 quickshell
-rofi
-rofi-emoji
-rofi-calc
-mako
 grim
 slurp
 wl-clipboard
 cliphist
+# qalc (libqalculate's CLI) backs the QML calculator popup (Super+equal). It
+# used to arrive transitively as rofi-calc's dependency; explicit now that
+# rofi-calc is gone.
+libqalculate
 brightnessctl
 playerctl
 pamixer
