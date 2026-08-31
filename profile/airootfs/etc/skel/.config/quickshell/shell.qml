@@ -10,6 +10,7 @@ import "power" as Power
 import "launcher" as Launcher
 import "osd" as Osd
 import "notify" as Notify
+import "popups" as Popups
 
 ShellRoot {
     id: shell
@@ -45,6 +46,10 @@ ShellRoot {
     LazyLoader {
         id: launcher
         Launcher.Launcher { onCloseRequested: launcher.active = false }
+    }
+    LazyLoader {
+        id: winswitch
+        Popups.WinSwitch { onCloseRequested: winswitch.active = false }
     }
     LazyLoader { id: osd; Osd.Osd {} }
 
@@ -102,6 +107,14 @@ ShellRoot {
         target: "launcher"
         function toggle(): void {
             launcher.activeAsync ? launcher.active = false : launcher.activeAsync = true
+        }
+    }
+
+    // `qs ipc call winswitch toggle` -- replaces `rofi -show window`.
+    IpcHandler {
+        target: "winswitch"
+        function toggle(): void {
+            winswitch.activeAsync ? winswitch.active = false : winswitch.activeAsync = true
         }
     }
 

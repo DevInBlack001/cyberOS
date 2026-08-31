@@ -108,7 +108,7 @@ local mod = "SUPER"
 hl.bind(mod .. " + Return", hl.dsp.exec_cmd(terminal))
 hl.bind(mod .. " + D",      hl.dsp.exec_cmd("qs ipc call launcher toggle"))
 hl.bind(mod .. " + I",      hl.dsp.exec_cmd("gtk-launch cyberos-install"))
-hl.bind(mod .. " + Tab",    hl.dsp.exec_cmd("rofi -show window"))
+hl.bind(mod .. " + Tab",    hl.dsp.exec_cmd("qs ipc call winswitch toggle"))
 hl.bind(mod .. " + period", hl.dsp.exec_cmd("rofi -show emoji"))
 hl.bind(mod .. " + equal",  hl.dsp.exec_cmd("rofi -show calc -no-show-match -no-sort"))
 hl.bind(mod .. " + B",      hl.dsp.exec_cmd(browser))
@@ -168,8 +168,9 @@ hl.window_rule({ name = "float-pip",  match = { title = "^(Picture-in-Picture)$"
 hl.window_rule({ name = "float-vbox", match = { class = "^(VirtualBox Machine)$" }, float = true })
 hl.window_rule({ name = "suppress-maximize", match = { class = ".*" }, suppress_event = "maximize" })
 
--- blur the floating bar/launcher/OSD/power-menu (all Quickshell surfaces share
--- the "quickshell" layer namespace) and the remaining rofi menus
--- (window/emoji/calc/clipboard -- drun is gone, replaced by the quickshell launcher)
+-- blur the floating bar/launcher/OSD/power-menu/window-switcher (all
+-- Quickshell surfaces share the "quickshell" layer namespace) and the
+-- remaining rofi menus (emoji/calc/clipboard -- drun and window are gone,
+-- replaced by the quickshell launcher and window switcher)
 hl.layer_rule({ match = { namespace = "quickshell" }, blur = true, ignore_alpha = 0.3 })
 hl.layer_rule({ match = { namespace = "rofi" },       blur = true })
