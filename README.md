@@ -59,6 +59,11 @@ sudo pacman -S archiso base-devel git
 
 Useful flags: `./build.sh --skip-aur` (reuse repo/), `--only-aur`, `--clean`.
 
+On success, `build.sh` asks whether to delete `work/` (AUR build trees +
+mkarchiso's scratch dir, easily several GB, none of it needed once `repo/`
+has the packages and `out/` has the ISO). Answering no keeps the next build
+fast; `--keep-work`/`--purge-work` skip the prompt (e.g. in CI).
+
 Write to USB: `sudo dd if=out/cyberos-*.iso of=/dev/sdX bs=4M status=progress oflag=sync`
 (or Ventoy / Rufus in DD mode).
 

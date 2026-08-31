@@ -35,6 +35,11 @@ own build metadata — not SemVer.
 
 ### Changed
 
+- `build.sh` now asks (once the ISO is built) whether to delete `work/` --
+  the AUR build trees and mkarchiso's scratch dir, which can run several GB
+  and were previously left on disk indefinitely. `--keep-work`/`--purge-work`
+  skip the prompt for non-interactive use; `repo/` and `out/` are untouched
+  either way.
 - `.gitignore` now excludes locally-built ISOs and screenshots.
 - `docs/SPEC.md` §7.2's requirement table now tracks implementation status
   per item (S1-S6), instead of leaving "is this actually done" unanswered.
