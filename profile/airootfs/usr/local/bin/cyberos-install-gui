@@ -1,16 +1,3 @@
-#!/bin/sh
-# cyberos-install-gui -- launcher for the CyberOS installer wizard.
-#
-# The wizard itself lives at /usr/share/cyberos/installer as a Quickshell
-# config (shell.qml + pages/); it collects answers and runs
-# /usr/local/bin/cyberos-install with its unattended flags, same as before.
-# This wrapper only translates --dry-run into the env var the config reads
-# (Quickshell.env() truthiness -- see WizState.qml), then hands off to qs.
-#
-#   --dry-run   render and drive the whole wizard without live media and
-#               without touching a disk; the install step prints the
-#               command instead.
-case "$1" in
-  --dry-run) CYBEROS_INSTALLER_DRYRUN=1; export CYBEROS_INSTALLER_DRYRUN;;
-esac
-exec qs -p /usr/share/cyberos/installer
+#!/usr/bin/env bash
+# cyberos-install-gui — terminal installer wrapper
+exec foot --app-id=cyberos-installer --title="Install CyberOS" sudo /usr/local/bin/cyberos-install "$@"
