@@ -6,3 +6,5 @@ aur/*.deb
 dist/
 __pycache__/
 *.pyc
+*.iso
+Images/
