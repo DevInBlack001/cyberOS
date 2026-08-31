@@ -24,10 +24,16 @@ ShellRoot {
         visible: true
         color: Cyber.Theme.bg
 
-        // Set true once the /run/archiso guard below decides this is not
-        // live media. Dry-run always skips the guard entirely -- same as the
-        // GTK wizard's `if not DRY_RUN and not os.path.isdir("/run/archiso")`.
-        property bool blocked: false
+        // Tri-state, not a bool: the archiso check resolves asynchronously
+        // (Process is never synchronous), so a bool defaulting to "not
+        // blocked" let the full wizard render for one or more frames on an
+        // already-installed machine before the guard below caught up --
+        // exactly the leak the guard exists to prevent. "checking" renders
+        // neither the wizard nor the guard message (a blank themed window)
+        // until the check (or dryRun) resolves it one way or the other.
+        // Dry-run always skips the guard entirely -- same as the GTK
+        // wizard's `if not DRY_RUN and not os.path.isdir("/run/archiso")`.
+        property string guardState: Cyber.WizState.dryRun ? "ok" : "checking"
 
         // ---------------------------------------------------------- guard
         // Same check InstallButton.qml uses on the bar. Non-zero exit means
@@ -35,7 +41,7 @@ ShellRoot {
         Process {
             id: archisoCheck
             command: ["test", "-d", "/run/archiso"]
-            onExited: exitCode => { if (exitCode !== 0) window.blocked = true; }
+            onExited: exitCode => { window.guardState = exitCode === 0 ? "ok" : "blocked"; }
         }
 
         Component.onCompleted: {
@@ -46,7 +52,7 @@ ShellRoot {
         ColumnLayout {
             anchors.fill: parent
             spacing: 0
-            visible: !window.blocked
+            visible: window.guardState === "ok"
 
             Rectangle {
                 id: header
@@ -127,7 +133,7 @@ ShellRoot {
         // Copy text verbatim from the GTK wizard's main()'s Gtk.AlertDialog.
         Rectangle {
             anchors.fill: parent
-            visible: window.blocked
+            visible: window.guardState === "blocked"
             color: Cyber.Theme.bg
 
             Column {
