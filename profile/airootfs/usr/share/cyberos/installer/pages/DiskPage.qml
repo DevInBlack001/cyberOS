@@ -21,11 +21,28 @@ Item {
     // Default-select the first disk as soon as one is known, whether that
     // happens before this page is even shown (Probe already resolved) or
     // later while the page is on screen (Probe.disks arrives async).
+    //
+    // The Loader in shell.qml destroys and recreates this Item on every
+    // visit (see shell.qml's header comment), which resets `diskCombo` to
+    // its model's index 0 even though WizState.disk itself survives
+    // untouched. Left alone that shows disk[0] on screen while the real
+    // selection (and thus the argv the install actually runs) is whatever
+    // WizState.disk still holds -- so a re-entered page must first try to
+    // restore the combo to WizState.disk's current index, and only fall
+    // back to picking (and overwriting) a default when there is nothing to
+    // restore, or the name no longer matches any probed disk.
     function _pickDefault() {
-        if (Cyber.Probe.disks.length > 0 && !Cyber.WizState.disk) {
-            Cyber.WizState.disk = Cyber.Probe.disks[0].name;
-            diskCombo.currentIndex = 0;
+        if (Cyber.Probe.disks.length === 0) return;
+        if (Cyber.WizState.disk) {
+            var idx = Cyber.WizState.indexOfValue(Cyber.Probe.disks, Cyber.WizState.disk,
+                                                   function (d) { return d.name; });
+            if (idx !== -1) {
+                diskCombo.currentIndex = idx;
+                return;
+            }
         }
+        Cyber.WizState.disk = Cyber.Probe.disks[0].name;
+        diskCombo.currentIndex = 0;
     }
 
     Component.onCompleted: root._pickDefault()

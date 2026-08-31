@@ -21,10 +21,19 @@ Item {
 
     property bool ready: root._problem().length === 0
     property string nextLabel: "Next"
-    // Resets to false on every fresh visit to this page only because the
-    // Loader destroys and recreates this Item each time (see shell.qml) --
-    // a future StackView-style cache that kept pages alive across
-    // navigation would need an explicit reset here instead.
+    // Starts false so a fresh visit's blank/default fields don't paint an
+    // error before the user has touched anything, and flips true on the
+    // first editingFinished from either passphrase field. The Loader
+    // destroys and recreates this Item on every visit (see shell.qml),
+    // which would otherwise reset `touched` back to false even when
+    // WizState.encrypt/luksPass already hold a real answer from before --
+    // hiding the "do not match" hint behind a dead Next button with no
+    // visible reason. Component.onCompleted below re-seeds `touched` to
+    // true in exactly that case (encrypt on and a non-empty luksPass
+    // already set), so the hint reappears immediately instead of only
+    // after the user retypes something. A future StackView-style cache
+    // that kept pages alive across navigation would need to drop both the
+    // reset and this seeding logic (touched would simply never reset).
     property bool touched: false
 
     // Confirm-passphrase has no WizState home, same reasoning as
@@ -52,10 +61,24 @@ Item {
     // below are needed -- one for the case Probe already resolved by the
     // time this page loads, one for the case it resolves later while the
     // page is already on screen.
+    //
+    // Same Loader-recreation hazard DiskPage.qml's _pickDefault() has:
+    // `tzCombo` resets to index 0 on every re-visit even though
+    // WizState.tz survives untouched, so a re-entered page must restore
+    // the combo to WizState.tz's current index first (via the shared
+    // WizState.indexOfValue() helper -- see its comment for why it lives
+    // there) and only fall back to picking a fresh default when there is
+    // nothing to restore, or the zone no longer appears in the probed list.
     function _pickDefaultTz() {
-        if (Cyber.WizState.tz) return;
         var zones = Cyber.Probe.timezones;
         if (zones.length === 0) return;
+        if (Cyber.WizState.tz) {
+            var idx = Cyber.WizState.indexOfValue(zones, Cyber.WizState.tz);
+            if (idx !== -1) {
+                tzCombo.currentIndex = idx;
+                return;
+            }
+        }
         // Ported from `"Africa/Accra" if "Africa/Accra" in zones else
         // "UTC"`. The GTK original then did `zones.index(default_tz)`
         // unconditionally, which would raise if neither zone were present
@@ -73,6 +96,10 @@ Item {
     Component.onCompleted: {
         root._pickDefaultTz();
         fsCombo.currentIndex = ["ext4", "btrfs"].indexOf(Cyber.WizState.fs);
+        // I2: seed `touched` so a re-entered page with an already-set LUKS
+        // passphrase pair shows its hint immediately rather than hiding
+        // behind a freshly-reset `touched` -- see the property's comment.
+        root.touched = Cyber.WizState.encrypt && Cyber.WizState.luksPass !== "";
     }
     Connections {
         target: Cyber.Probe

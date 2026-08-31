@@ -38,10 +38,29 @@ ShellRoot {
         // ---------------------------------------------------------- guard
         // Same check InstallButton.qml uses on the bar. Non-zero exit means
         // /run/archiso is missing, i.e. this is not the live medium.
+        //
+        // Spawn-failure fallback, same idiom Probe.qml's every Process
+        // already uses (see its file-level comment for why): if `test`
+        // itself fails to spawn, this build never emits `exited`, only
+        // `runningChanged` going straight to false -- so onExited alone
+        // would leave guardState stuck on "checking" forever (a blank
+        // themed window, the exact leak the tri-state exists to prevent).
+        // `onRunningChanged` resolves that case to "blocked", not "ok": an
+        // unverifiable guard must fail safe as "not the live medium" rather
+        // than silently let the destructive wizard render.
         Process {
             id: archisoCheck
+            property bool _resolved: false
             command: ["test", "-d", "/run/archiso"]
-            onExited: exitCode => { window.guardState = exitCode === 0 ? "ok" : "blocked"; }
+            onExited: exitCode => {
+                archisoCheck._resolved = true;
+                window.guardState = exitCode === 0 ? "ok" : "blocked";
+            }
+            onRunningChanged: {
+                if (running || archisoCheck._resolved) return;
+                archisoCheck._resolved = true;
+                window.guardState = "blocked";
+            }
         }
 
         Component.onCompleted: {

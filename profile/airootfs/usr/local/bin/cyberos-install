@@ -536,8 +536,9 @@ rm -rf /etc/mkinitcpio.conf.d/archiso.conf /etc/sddm.conf.d/zz-live-autologin.co
 # The installer only works from the live medium. Left in place it shows up in the
 # launcher on an installed machine and dies with "must be run from the live ISO",
 # so drop it along with its menu entry and keybind.
-rm -f /usr/share/applications/cyberos-install.desktop \
-      /usr/local/bin/cyberos-install /usr/local/bin/cyberos-install-gui
+rm -rf /usr/share/applications/cyberos-install.desktop \
+      /usr/local/bin/cyberos-install /usr/local/bin/cyberos-install-gui \
+      /usr/share/cyberos/installer
 sed -i '/gtk-launch cyberos-install/d' /etc/skel/.config/hypr/hyprland.lua /home/*/.config/hypr/hyprland.lua 2>/dev/null || true
 systemctl enable NetworkManager sddm bluetooth cyberos-firstboot >/dev/null 2>&1
 systemctl disable ModemManager >/dev/null 2>&1 || true

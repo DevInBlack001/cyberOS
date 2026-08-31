@@ -77,6 +77,28 @@ Singleton {
     property bool encrypt: false
     property string luksPass: ""
 
+    // ------------------------------------------------------------- restore
+    // Shared by DiskPage.qml and OptionsPage.qml (both reach this singleton
+    // already): the Loader in shell.qml destroys and recreates each page's
+    // Item on every visit, which resets that page's own combo box back to
+    // its model's index 0 -- but the answer it represents (`disk`, `tz`)
+    // lives here in WizState and survives untouched. Re-entering a page
+    // must restore its combo to the index matching the surviving answer
+    // rather than silently re-picking a default, or the display can show a
+    // different choice than the one still in effect (see DiskPage.qml's
+    // _pickDefault() and OptionsPage.qml's _pickDefaultTz() for the two
+    // call sites). `keyFn`, when given, extracts the comparable key from
+    // each list entry (e.g. a disk object's `.name`); omitted, list entries
+    // are compared directly (e.g. a plain timezone string list). Returns -1
+    // for an empty `value` or no match, same as Array.indexOf/findIndex.
+    function indexOfValue(list, value, keyFn) {
+        if (!value) return -1;
+        for (var i = 0; i < list.length; i++) {
+            if ((keyFn ? keyFn(list[i]) : list[i]) === value) return i;
+        }
+        return -1;
+    }
+
     // The partition picker is only meaningful for custom partitioning --
     // same rule as the GTK wizard's Wizard.skipped().
     function skipped(name) {
