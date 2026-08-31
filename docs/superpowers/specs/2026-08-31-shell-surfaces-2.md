@@ -50,3 +50,7 @@ dismiss,expire}, NotificationAction.invoke); the shell's existing policy tests g
 new QML automatically (same directory); every removal proven by grep over profile/;
 suite green each task; VM verification task at the end (notify-send from a terminal,
 each popup driven by real keybinds).
+Fix-wave note (2026-08-31): the complete-removal gate (tests/surfaces2.bats,
+"the complete-removal gate") intentionally permits explanatory `#`/`//`/`--`
+comments mentioning rofi/mako (migration docs) — it fails only on LIVE
+references, looser than this spec's earlier "comments included" wording.

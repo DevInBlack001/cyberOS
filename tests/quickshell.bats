@@ -76,7 +76,10 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
 
 @test "power menu replaces the rofi script with the same four actions" {
   [ ! -e "$ROOT/profile/airootfs/etc/skel/.config/rofi/powermenu.sh" ]
-  ! grep -q 'powermenu.sh' "$ROOT/profile/profiledef.sh"
+  # run-wrapped: a mid-body "!" is exempt from errexit and would be silently
+  # swallowed by the loop/grep that follows.
+  run grep -q 'powermenu.sh' "$ROOT/profile/profiledef.sh"
+  [ "$status" -ne 0 ]
   for a in hyprlock 'hl.dsp.exit' 'systemctl.*reboot' 'systemctl.*poweroff'; do
     grep -qE "$a" "$QS/power/PowerMenu.qml"
   done
@@ -87,8 +90,17 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   for fn in volumeUp volumeDown volumeMute brightnessUp brightnessDown; do
     grep -q "function $fn" "$QS/shell.qml"
   done
-  ! grep -rq 'swayosd' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
-  ! grep -qE '^swayosd$' "$ROOT/profile/packages.x86_64"
+  # hyprland.lua legitimately carries an explanatory "-- swayosd is gone --"
+  # migration comment (line ~152); exclude comment-only lines so this checks
+  # for LIVE references only, same comment-aware philosophy as the
+  # complete-removal gate in surfaces2.bats. Fixing the previously-swallowed
+  # "!" here (it used to be followed by a passing statement) surfaced this:
+  # the raw "! grep -rq 'swayosd' ..." check, run for real, was matching
+  # that comment and would have false-failed once un-swallowed.
+  run bash -c "grep -n 'swayosd' '$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua' | grep -vE '^[0-9]+:[[:space:]]*--'"
+  [ -z "$output" ]
+  run grep -qE '^swayosd$' "$ROOT/profile/packages.x86_64"
+  [ "$status" -ne 0 ]
   grep -q 'qs ipc call osd' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
 }
 
@@ -108,8 +120,9 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   grep -q 'DesktopEntries' "$QS/launcher/Launcher.qml"
   grep -q '"launcher"' "$QS/shell.qml"
   grep -q 'qs ipc call launcher toggle' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
-  ! grep -q 'rofi -show drun' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
-  ! grep -q 'rofi -show calc' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"  # calc became a quickshell surface in Task 4; see tests/surfaces2.bats
+  # merged into one alternation, sole/last statement -- see the mako-check
+  # comment in surfaces2.bats for why a mid-body "!" can't be trusted.
+  ! grep -qE 'rofi -show drun|rofi -show calc' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"  # calc became a quickshell surface in Task 4; see tests/surfaces2.bats
 }
 
 @test "launcher: centred focusable panel, GridView + filter, noDisplay excluded" {
@@ -138,11 +151,14 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
 
 @test "waybar and swayosd are fully gone; quickshell ships" {
   [ ! -d "$ROOT/profile/airootfs/etc/skel/.config/waybar" ]
-  ! grep -qE '^waybar$' "$ROOT/profile/packages.x86_64"
-  ! grep -qE '^swayosd$' "$ROOT/profile/packages.x86_64"
+  run grep -qE '^waybar$' "$ROOT/profile/packages.x86_64"
+  [ "$status" -ne 0 ]
+  run grep -qE '^swayosd$' "$ROOT/profile/packages.x86_64"
+  [ "$status" -ne 0 ]
   grep -qE '^quickshell$' "$ROOT/profile/packages.x86_64"
   grep -q 'exec_cmd("qs")' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
-  ! grep -q 'waybar' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
+  run grep -q 'waybar' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
+  [ "$status" -ne 0 ]
   ! grep -q 'waybar' "$ROOT/profile/airootfs/usr/local/bin/cyberos-theme"
 }
 
@@ -159,8 +175,10 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
 # bats cannot run qs itself, so this is a static (belt-and-braces) check on
 # top of the live smoke-test verification in the report.
 @test "C1: no XDG_CONFIG_HOME truthiness bug in Theme.qml / WidgetHost.qml" {
-  ! grep -q 'env("XDG_CONFIG_HOME") !== ' "$QS/Theme.qml"
-  ! grep -q 'env("XDG_CONFIG_HOME") !== ' "$QS/bar/WidgetHost.qml"
+  # single grep across both files (sole/last statement) instead of two
+  # separate "!" checks -- absence-in-either is equivalent to absence-in-both
+  # for a negated presence check, and avoids the mid-body "!" swallow bug.
+  ! grep -q 'env("XDG_CONFIG_HOME") !== ' "$QS/Theme.qml" "$QS/bar/WidgetHost.qml"
 }
 
 @test "C1: cyberos-theme writes theme.json under \$HOME/.config with no XDG_CONFIG_HOME" {

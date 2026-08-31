@@ -8,11 +8,19 @@ QS="$ROOT/profile/airootfs/etc/skel/.config/quickshell"
   grep -q 'NotificationServer' "$QS/shell.qml"
   grep -q '"notify"' "$QS/shell.qml"
   [ ! -d "$ROOT/profile/airootfs/etc/skel/.config/mako" ]
-  ! grep -qE '^mako$' "$ROOT/profile/packages.x86_64"
-  ! grep -rn 'mako' "$ROOT/profile/airootfs/usr/local/bin/cyberos-theme"
-  ! grep -rn 'mako' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
   [ -f "$QS/notify/NotifyCard.qml" ] && grep -q 'Theme.alert' "$QS/notify/NotifyCard.qml"
   grep -q 'invoke' "$QS/notify/NotifyCard.qml"
+  # negated checks run-wrapped so a mid-body failure can't be swallowed by a
+  # later passing statement (bash/bats exempt "!"-negated commands from
+  # errexit, so only the LAST statement in a body safely propagates a "!"
+  # failure -- with three of these here, `run` + explicit status assertion
+  # is used instead of trying to make all three "last").
+  run grep -qE '^mako$' "$ROOT/profile/packages.x86_64"
+  [ "$status" -ne 0 ]
+  run grep -rn 'mako' "$ROOT/profile/airootfs/usr/local/bin/cyberos-theme"
+  [ "$status" -ne 0 ]
+  run grep -rn 'mako' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
+  [ "$status" -ne 0 ]
 }
 
 @test "mako is gone from the whole profile tree, not just the obvious spots" {
@@ -116,7 +124,8 @@ run_hypr_config() {
   run run_hypr_config
   [ "$status" -eq 0 ]
   [[ "$output" == *"bindcmd SUPER + Tab :: qs ipc call winswitch toggle"* ]]
-  ! grep -q 'rofi -show window' <<<"$output"
+  run grep -q 'rofi -show window' <<<"$output"
+  [ "$status" -ne 0 ]
   ! grep -rq 'rofi -show window' "$HYPR/hyprland.lua"
 }
 
@@ -144,7 +153,10 @@ run_hypr_config() {
   grep -qi 'unicode' "$QS/emoji.txt"
   # real, literal UTF-8 emoji glyphs -- not \uXXXX-escaped (R-s1): every
   # non-comment line's first byte sequence must NOT be a literal backslash-u.
-  ! grep -qE '^\\u' "$QS/emoji.txt"
+  # run-wrapped (not just "! grep") because a later statement follows in
+  # this body -- see the mako-check comment above for why that matters.
+  run grep -qE '^\\u' "$QS/emoji.txt"
+  [ "$status" -ne 0 ]
   # more than a token handful of entries
   n=$(grep -vcE '^#' "$QS/emoji.txt")
   [ "$n" -gt 1000 ]
@@ -193,7 +205,8 @@ run_hypr_config() {
   run run_hypr_config
   [ "$status" -eq 0 ]
   [[ "$output" == *"bindcmd SUPER + period :: qs ipc call emoji toggle"* ]]
-  ! grep -q 'rofi -show emoji' <<<"$output"
+  run grep -q 'rofi -show emoji' <<<"$output"
+  [ "$status" -ne 0 ]
   ! grep -rq 'rofi -show emoji' "$HYPR/hyprland.lua"
 }
 
@@ -268,7 +281,8 @@ run_hypr_config() {
   run run_hypr_config
   [ "$status" -eq 0 ]
   [[ "$output" == *"bindcmd SUPER + equal :: qs ipc call calc toggle"* ]]
-  ! grep -q 'rofi -show calc' <<<"$output"
+  run grep -q 'rofi -show calc' <<<"$output"
+  [ "$status" -ne 0 ]
   ! grep -rq 'rofi -show calc' "$HYPR/hyprland.lua"
 }
 
@@ -276,13 +290,15 @@ run_hypr_config() {
   run run_hypr_config
   [ "$status" -eq 0 ]
   [[ "$output" == *"bindcmd SUPER + X :: qs ipc call clip toggle"* ]]
-  ! grep -q 'rofi -dmenu' <<<"$output"
+  run grep -q 'rofi -dmenu' <<<"$output"
+  [ "$status" -ne 0 ]
   ! grep -rq 'rofi -dmenu' "$HYPR/hyprland.lua"
 }
 
 @test "packages: libqalculate added explicitly, rofi-calc gone, cliphist still present (rofi itself leaves in Task 5)" {
   grep -qE '^libqalculate$' "$ROOT/profile/packages.x86_64"
-  ! grep -qE '^rofi-calc$' "$ROOT/profile/packages.x86_64"
+  run grep -qE '^rofi-calc$' "$ROOT/profile/packages.x86_64"
+  [ "$status" -ne 0 ]
   grep -qE '^cliphist$' "$ROOT/profile/packages.x86_64"
 }
 

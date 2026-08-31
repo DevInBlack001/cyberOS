@@ -110,8 +110,10 @@ run_config() { lua -e "dofile('$STUB'); dofile('$HYPR/hyprland.lua'); report()";
   run run_config
   [[ "$output" == *"bindcmd SUPER + equal :: qs ipc call calc toggle"* ]]
   [[ "$output" == *"bindcmd SUPER + X :: qs ipc call clip toggle"* ]]
-  ! grep -q 'rofi -show calc' <<<"$output"
-  ! grep -q 'rofi -dmenu' <<<"$output"
+  # merged into one alternation so the negated check is the sole/last
+  # statement -- a mid-body "!" is exempt from errexit and would be
+  # silently swallowed by a later passing statement otherwise.
+  ! grep -qE 'rofi -show calc|rofi -dmenu' <<<"$output"
 }
 
 @test "Super+period opens the quickshell emoji picker; rofi -show emoji is gone" {
