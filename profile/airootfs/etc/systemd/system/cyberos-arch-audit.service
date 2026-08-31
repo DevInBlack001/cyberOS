@@ -1,0 +1,10 @@
+[Unit]
+Description=Report known CVEs in installed packages (docs/SPEC.md S4)
+Documentation=man:arch-audit(1)
+
+[Service]
+Type=oneshot
+# Output lands in the journal (`journalctl -u cyberos-arch-audit`); arch-audit
+# is read-only against security.archlinux.org's advisory data, it does not
+# change anything on the machine.
+ExecStart=/usr/bin/arch-audit

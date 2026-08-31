@@ -26,6 +26,19 @@ own build metadata — not SemVer.
   instead of Qt's default auto-detected rich text, closing a markup
   injection into the system bar.
 
+### Added
+
+- `cyberos-arch-audit.timer`/`.service`: a weekly `arch-audit` run on
+  installed systems, reporting known CVEs in installed packages against
+  the pinned channel to the journal (`docs/SPEC.md` S4). Enabled by the
+  installer alongside NetworkManager/sddm/bluetooth/cyberos-firstboot.
+
 ### Changed
 
 - `.gitignore` now excludes locally-built ISOs and screenshots.
+- `docs/SPEC.md` §7.2's requirement table now tracks implementation status
+  per item (S1-S6), instead of leaving "is this actually done" unanswered.
+- Caught up `docs/branches/` to actual merge history: several charters
+  still said "planned"/"open" for branches merged weeks ago, two merged
+  branches had no table row at all, and `main.md` flagged an already-fixed
+  bug as outstanding.
