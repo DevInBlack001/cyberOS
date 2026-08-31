@@ -154,15 +154,24 @@ ShellRoot {
             }
 
             // Page name -> file convention: "welcome" -> pages/WelcomePage.qml.
-            // Only WelcomePage and DonePage exist in this skeleton task; the
-            // rest arrive in later tasks (disk, mode, custom, account,
-            // options, confirm, install).
-            Loader {
-                id: pageLoader
+            // Pages were laid out for the 720px design width; when the
+            // compositor tiles or maximizes the window, letting them fill it
+            // stretches every field row across the whole screen. Cap the
+            // content column at the design width and center it instead --
+            // only the header spans the full window.
+            Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                source: "pages/" + Cyber.WizState.page.charAt(0).toUpperCase()
-                        + Cyber.WizState.page.slice(1) + "Page.qml"
+
+                Loader {
+                    id: pageLoader
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: Math.min(parent.width, 760)
+                    source: "pages/" + Cyber.WizState.page.charAt(0).toUpperCase()
+                            + Cyber.WizState.page.slice(1) + "Page.qml"
+                }
             }
         }
 
