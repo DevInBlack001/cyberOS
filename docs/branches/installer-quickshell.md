@@ -1,6 +1,9 @@
 # Branch: `installer/quickshell`
 
-**State:** verified, PR open · **Owner:** edbron
+**State:** superseded — this branch's PR #11 merged into `main`, but the product
+direction changed immediately after and `installer/cli-switch` (PR #12) replaces this
+QML wizard with an ANSI CLI installer. `/usr/share/cyberos/installer/` and
+`tests/installer-qml.bats` were removed as part of that switch. · **Owner:** edbron
 **Spec:** `docs/superpowers/specs/2026-08-31-installer-quickshell.md`
 **Plan:** `docs/superpowers/plans/2026-08-31-installer-quickshell.md`
 

@@ -75,8 +75,11 @@ traceroute
 net-tools
 whois
 
-# ---- graphical installer (cyberos-install-gui) ----
-python-gobject
+# ---- GTK4/libadwaita stack ----
+# python-gobject was removed with the GTK installer wizard (installer/cli-switch).
+# gtk4/libadwaita stay: no shipped app currently pulls them in, but docs/SPEC.md
+# S5.7 earmarks them for the planned cyberos-store client (CLI + GTK4/libadwaita
+# GUI) -- removing them now just means re-adding them when that lands.
 gtk4
 libadwaita
 
