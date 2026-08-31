@@ -20,6 +20,10 @@ Item {
 
     property bool ready: root._problem().length === 0
     property string nextLabel: "Next"
+    // Resets to false on every fresh visit to this page only because the
+    // Loader destroys and recreates this Item each time (see shell.qml) --
+    // a future StackView-style cache that kept pages alive across
+    // navigation would need an explicit reset here instead.
     property bool touched: false
 
     // Confirm-password has no WizState home -- see WizState.qml's account

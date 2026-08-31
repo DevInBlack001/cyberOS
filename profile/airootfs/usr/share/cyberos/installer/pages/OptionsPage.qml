@@ -21,6 +21,10 @@ Item {
 
     property bool ready: root._problem().length === 0
     property string nextLabel: "Next"
+    // Resets to false on every fresh visit to this page only because the
+    // Loader destroys and recreates this Item each time (see shell.qml) --
+    // a future StackView-style cache that kept pages alive across
+    // navigation would need an explicit reset here instead.
     property bool touched: false
 
     // Confirm-passphrase has no WizState home, same reasoning as
@@ -125,7 +129,7 @@ Item {
                 indicator: Text {
                     x: tzCombo.width - width - 10
                     y: (tzCombo.height - height) / 2
-                    text: ""
+                    text: "\uf0d7"
                     color: Cyber.Theme.muted
                     font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 1 }
                 }
@@ -198,7 +202,7 @@ Item {
                 indicator: Text {
                     x: fsCombo.width - width - 10
                     y: (fsCombo.height - height) / 2
-                    text: ""
+                    text: "\uf0d7"
                     color: Cyber.Theme.muted
                     font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 1 }
                 }

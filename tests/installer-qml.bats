@@ -13,7 +13,15 @@ QMLDIRS=/tmp/claude-1000/-home-edbron-Work/9fdca27c-4540-4321-9795-683d0bdd0a18/
 }
 
 @test "installer QML: no raw glyphs, no hex outside Theme.qml, parses" {
-  ! grep -rlP '[\x{E000}-\x{F8FF}\x{F0000}-\x{FFFFD}]' "$INST" --include='*.qml'
+  # A bare `! cmd` mid-body does NOT trip bash's `set -e` when cmd "fails"
+  # (i.e. the negated command's own non-zero status) -- bash carves
+  # !-negated commands out of errexit's early-exit rule. That silently
+  # turned this into a no-op: a real raw glyph in the tree would print a
+  # match and still leave this line's own exit status (from `!`) unable to
+  # fail the test. `run` + an explicit `[ -z "$output" ]` check instead,
+  # matching the pattern the hex-colour check right below already used.
+  run grep -rlP '[\x{E000}-\x{F8FF}\x{F0000}-\x{FFFFD}]' "$INST" --include='*.qml'
+  [ -z "$output" ]
   run grep -rlE "['\"]#[0-9A-Fa-f]{3,8}" "$INST" --include='*.qml'
   [ "$output" = "$INST/Theme.qml" ] || [ -z "$output" ]
   [ -x "$QMLLINT" ] || skip "qmllint absent"
