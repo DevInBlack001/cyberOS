@@ -116,7 +116,6 @@ xdg-desktop-portal-hyprland
 xdg-desktop-portal-gtk
 xdg-user-dirs
 quickshell
-rofi
 grim
 slurp
 wl-clipboard

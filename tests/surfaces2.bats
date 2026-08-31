@@ -197,9 +197,8 @@ run_hypr_config() {
   ! grep -rq 'rofi -show emoji' "$HYPR/hyprland.lua"
 }
 
-@test "rofi-emoji is gone from packages; rofi still present (rofi-calc leaves in Task 4)" {
+@test "rofi-emoji is gone from packages; rofi itself leaves in Task 5" {
   ! grep -qE '^rofi-emoji$' "$ROOT/profile/packages.x86_64"
-  grep -qE '^rofi$' "$ROOT/profile/packages.x86_64"
 }
 
 # Task 4: QML calculator (Super+equal) replaces `rofi -show calc`; QML
@@ -242,16 +241,18 @@ run_hypr_config() {
   grep -q 'closeRequested' "$QS/popups/ClipHist.qml"
 }
 
-@test "no composed shell strings in the new Calc/ClipHist popups (argv + stdin writes only)" {
+@test "no composed shell strings anywhere in quickshell (argv + stdin writes only), except two pre-existing static /proc readers" {
   # The Global Constraints test is "! grep -rn '\"sh\", \"-c\"' \$QS" over the
-  # whole quickshell dir -- but bar/SysStats.qml and widgets/00-example-
+  # whole quickshell dir. Widened tree-wide (was scoped to Calc/ClipHist
+  # only) with an explicit allowlist for the two pre-existing legitimate
+  # static /proc readers: bar/SysStats.qml and widgets/00-example-
   # uptime.qml pre-date this plan (installer/quickshell) and legitimately
-  # shell out to static, argument-free /proc reads with zero untrusted input,
-  # which is not the injection trap this constraint targets and is out of
-  # this task's file scope. Scoped here to the two files Task 4 actually
-  # writes, where the real trap lives (the cliphist decode -> wl-copy chain
-  # carrying a user-selected clipboard entry).
-  ! grep -rn '"sh", "-c"' "$QS/popups/Calc.qml" "$QS/popups/ClipHist.qml"
+  # shell out to static, argument-free /proc reads with zero untrusted
+  # input, which is not the injection trap this constraint targets. Any
+  # "sh", "-c" OUTSIDE those two files -- including a regression in the
+  # cliphist decode -> wl-copy chain carrying a user-selected clipboard
+  # entry -- fails this test.
+  ! (grep -rn '"sh", "-c"' "$QS" --include='*.qml' | grep -vE 'bar/SysStats.qml|widgets/00-example-uptime.qml')
 }
 
 @test "shell.qml: calc + clip LazyLoaders and IpcHandlers mirror the launcher's toggle shape" {
@@ -279,13 +280,59 @@ run_hypr_config() {
   ! grep -rq 'rofi -dmenu' "$HYPR/hyprland.lua"
 }
 
-@test "packages: libqalculate added explicitly, rofi-calc gone, rofi and cliphist still present" {
+@test "packages: libqalculate added explicitly, rofi-calc gone, cliphist still present (rofi itself leaves in Task 5)" {
   grep -qE '^libqalculate$' "$ROOT/profile/packages.x86_64"
   ! grep -qE '^rofi-calc$' "$ROOT/profile/packages.x86_64"
-  grep -qE '^rofi$' "$ROOT/profile/packages.x86_64"
   grep -qE '^cliphist$' "$ROOT/profile/packages.x86_64"
 }
 
 @test "no raw PUA glyph bytes in the new Calc/ClipHist popups (escapes only)" {
   ! grep -rlP '[\x{E000}-\x{F8FF}\x{F0000}-\x{FFFFD}]' "$QS/popups/Calc.qml" "$QS/popups/ClipHist.qml"
+}
+
+# Task 5: rofi eradication -- rofi and rofi's config are used by NOTHING
+# after Tasks 1-4 (winswitch/emoji/calc/clip all live in QML now), so the
+# package, its config dir, the dead layer_rule and the theme generator's
+# rofi block all leave.
+
+@test "rofi config dir is gone" {
+  [ ! -d "$ROOT/profile/airootfs/etc/skel/.config/rofi" ]
+}
+
+@test "rofi is gone from packages.x86_64" {
+  ! grep -qE '^rofi$' "$ROOT/profile/packages.x86_64"
+}
+
+@test "the dead rofi layer_rule is gone from hyprland.lua; the quickshell layer_rule survives" {
+  # NOTE: "! grep" is only guaranteed to fail the test when it is the LAST
+  # statement in the body -- bash/bats exempt a "!"-negated command from
+  # errexit/ERR-trap propagation, so an earlier "! grep" that "fails" (i.e.
+  # a real match was found) would be silently swallowed if something ran
+  # after it. Keep the negated check last.
+  grep -q 'namespace = "quickshell"' "$HYPR/hyprland.lua"
+  ! grep -q 'namespace = "rofi"' "$HYPR/hyprland.lua"
+}
+
+@test "cyberos-theme: rofi block and mkdir component are gone; the script still parses" {
+  bash -n "$ROOT/profile/airootfs/usr/local/bin/cyberos-theme"
+  # the other generated blocks are untouched: hypr, foot, tmux, nvim and
+  # quickshell theme.json all still get written
+  grep -q '"$CFG/hypr/theme.conf"' "$ROOT/profile/airootfs/usr/local/bin/cyberos-theme"
+  grep -q '"$CFG/hypr/theme.lua"' "$ROOT/profile/airootfs/usr/local/bin/cyberos-theme"
+  grep -q '"$CFG/foot/foot.ini"' "$ROOT/profile/airootfs/usr/local/bin/cyberos-theme"
+  grep -q '"$CFG/tmux/theme.conf"' "$ROOT/profile/airootfs/usr/local/bin/cyberos-theme"
+  grep -q '"$CFG/nvim/lua/cyber_colors.lua"' "$ROOT/profile/airootfs/usr/local/bin/cyberos-theme"
+  grep -q '"$CFG/quickshell/theme.json"' "$ROOT/profile/airootfs/usr/local/bin/cyberos-theme"
+  # negated checks last, combined into one grep call (see NOTE above)
+  ! grep -qE '/rofi/colors\.rasi|\$CFG"/rofi' "$ROOT/profile/airootfs/usr/local/bin/cyberos-theme"
+}
+
+@test "the complete-removal gate: rofi/mako survive nowhere in profile/ except explanatory migration comments" {
+  # Any hit of "rofi" or "mako" that is NOT on a comment line (#, // or --
+  # prefixed, ignoring leading whitespace) is a live reference -- a command,
+  # a package line, a config path, an autostart -- and fails this test. This
+  # is meaningful, not vacuous: proven RED by temporarily reintroducing a
+  # bare "rofi" package line (self-review), which this same pipeline catches.
+  run bash -c "grep -rniE 'rofi|mako' '$ROOT/profile/' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(#|//|--)'"
+  [ -z "$output" ]
 }

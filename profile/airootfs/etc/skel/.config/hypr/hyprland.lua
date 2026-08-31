@@ -170,9 +170,6 @@ hl.window_rule({ name = "suppress-maximize", match = { class = ".*" }, suppress_
 
 -- blur the floating bar/launcher/OSD/power-menu/window-switcher/emoji-picker/
 -- calculator/clipboard-history (all Quickshell surfaces share the
--- "quickshell" layer namespace). The "rofi" layer_rule below is now dead --
--- drun, window, emoji, calc and clipboard are all quickshell, so rofi has no
--- remaining bind -- but removing the rule, the rofi package, and its config
--- is Task 5's job (rofi eradication).
+-- "quickshell" layer namespace -- drun, window, emoji, calc and clipboard
+-- are all quickshell now, rofi is gone).
 hl.layer_rule({ match = { namespace = "quickshell" }, blur = true, ignore_alpha = 0.3 })
-hl.layer_rule({ match = { namespace = "rofi" },       blur = true })
