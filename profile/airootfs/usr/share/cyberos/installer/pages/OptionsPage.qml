@@ -12,7 +12,7 @@ import ".." as Cyber
 // encrypt switch is toggled (mirroring on_encrypt_toggled(), which always
 // blanked luks_hint's text on every toggle, on or off) so flipping the
 // switch never paints a stale error before the user has typed anything.
-// Unlike account_hint/custom_hint (Gtk.Label css_classes=["error"]),
+// Unlike account_hint/custom_hint (an error-styled label),
 // luks_hint used only "dim-label"/"caption" -- Hint.error is left false
 // here (its default) to match, `error: true` is set explicitly wherever
 // the GTK original really did use the "error" class.

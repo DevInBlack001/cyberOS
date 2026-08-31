@@ -42,7 +42,7 @@ Singleton {
     // above and the GTK original's part_devices[selected_index] (Wizard's
     // part_root/part_efi ComboRows only ever held the index; the actual
     // device string lived in self.part_devices). formatEfi defaults false,
-    // matching Gtk.Switch's own default-inactive state (never set active
+    // matching the original toolkit's switch widget default-inactive state (never set active
     // before use in page_custom()).
     property string rootPart: ""
     property string efiPart: ""
@@ -95,5 +95,45 @@ Singleton {
             index--;
             if (!skipped(page)) break;
         }
+    }
+
+    // ------------------------------------------------------------- install
+    // Ported verbatim from the GTK wizard's argv() (~502-520): same order,
+    // same flags, `--password-stdin --yes` last. No secret (password,
+    // luksPass) is ever referenced here -- those travel only through
+    // stdinSecrets() below, over Process.write(), never on argv (argv is
+    // world-readable through /proc/*/cmdline).
+    function argv() {
+        var modeArgs;
+        if (mode === "manual") {
+            modeArgs = ["--root", rootPart, "--efi", efiPart];
+            if (formatEfi) modeArgs.push("--format-efi");
+        } else if (mode === "alongside") {
+            modeArgs = ["--alongside"];
+        } else {
+            modeArgs = ["--erase"];
+        }
+        var out = ["sudo", "-n", "/usr/local/bin/cyberos-install",
+                   "--disk", disk].concat(modeArgs, [
+                   "--user", user.trim(),
+                   "--hostname", host.trim(),
+                   "--tz", tz,
+                   "--fs", fs,
+                   "--swap", String(swapGib)],
+                   encrypt ? ["--encrypt"] : [],
+                   ["--password-stdin", "--yes"]);
+        return out;
+    }
+
+    // Ported verbatim from start_install()'s `secrets` build: line 1 the
+    // user's password, line 2 blank (root password -- "same as the user's"),
+    // line 3 the LUKS passphrase, only when encrypting. This is the ONLY
+    // function in this file that touches `password`/`luksPass` -- the
+    // function above building the sudo invocation must never gain such a
+    // reference.
+    function stdinSecrets() {
+        var secrets = password + "\n" + "\n";
+        if (encrypt) secrets += luksPass + "\n";
+        return secrets;
     }
 }

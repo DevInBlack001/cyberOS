@@ -9,7 +9,7 @@ import ".." as Cyber
 // stands in for the GTK original's Adw.PreferencesGroup + Adw.ComboRow.
 // Probe.disks[i].label is already formatted exactly as page_disk() built it
 // ("NAME  (SIZE)  MODEL[:22]"); "no disks found" is Probe.disks' own
-// Gtk.StringList fallback entry, ported as this page's ready-gate instead
+// original toolkit's string-list fallback entry, ported as this page's ready-gate instead
 // (the GTK ComboRow just showed the literal text with nothing selectable to
 // act on -- Next disabled here achieves the same "cannot proceed" outcome).
 Item {

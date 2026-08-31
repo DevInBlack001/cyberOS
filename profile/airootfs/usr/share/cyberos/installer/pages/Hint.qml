@@ -2,7 +2,7 @@ import QtQuick
 import ".." as Cyber
 
 // Hint.qml -- shared hint/status label, the QML replacement for the GTK
-// wizard's dim-label / "error" css-class Gtk.Label pattern
+// wizard's dim-label / "error" css-class label pattern
 // (mode_hint/custom_hint/account_hint/luks_hint in cyberos-install-gui).
 // Task 4's account/options/custom pages reuse this for validation messages.
 //

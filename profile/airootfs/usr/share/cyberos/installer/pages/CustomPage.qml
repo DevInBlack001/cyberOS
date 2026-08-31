@@ -20,7 +20,7 @@ Item {
     // Probe.partitions' result, indexed identically to rootCombo/efiCombo
     // below (refresh() below rebuilds both the combos and this array in
     // lockstep, same as refresh_partitions() did for part_devices and the
-    // two Gtk.StringLists).
+    // two string-list models).
     property var _parts: []
 
     // Ported from validate_custom(). Both pickers are single-choice
@@ -50,6 +50,17 @@ Item {
     // default).
     function refresh() {
         Cyber.Probe.partitions(Cyber.WizState.disk, function (rows) {
+            // Guard against a destroyed root: WizState.next()/back() walk
+            // the pages array in a single synchronous loop (see
+            // WizState.qml), so a non-manual mode's Next click passes
+            // through "custom" transiently -- the Loader (shell.qml)
+            // creates this Item, Component.onCompleted fires refresh()
+            // and spawns the async lsblk probe below, then the very next
+            // loop iteration already lands on "account" and destroys this
+            // Item, all before lsblk exits. Without this guard the
+            // callback's first line throws ("Value is null") reaching
+            // into an already-destroyed root.
+            if (!root) return;
             root._parts = rows;
             var esp = -1;
             for (var i = 0; i < rows.length; i++) {

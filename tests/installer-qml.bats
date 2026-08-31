@@ -99,3 +99,54 @@ QMLDIRS=/tmp/claude-1000/-home-edbron-Work/9fdca27c-4540-4321-9795-683d0bdd0a18/
   grep -qF 'The passphrases do not match.' "$INST/pages/OptionsPage.qml"
   grep -qF 'TextInput.Password' "$INST/pages/OptionsPage.qml"
 }
+
+@test "argv is pinned to the CLI contract and secrets never reach it" {
+  grep -qF '"--password-stdin", "--yes"' "$INST/WizState.qml"
+  grep -qF '"sudo", "-n"' "$INST/WizState.qml"
+  for f in --disk --user --hostname --tz --fs --swap --format-efi --alongside --erase --encrypt; do
+    grep -qF "\"$f\"" "$INST/WizState.qml"
+  done
+  ! grep -rn 'password' "$INST/WizState.qml" | grep -iE 'argv|command' | grep -v stdin
+  ! grep -rn 'sh", "-c' "$INST"
+}
+
+@test "no GTK remains in the tree" {
+  ! grep -rn 'libadwaita\|gi.repository\|Gtk' "$ROOT/profile/airootfs/usr/local/bin/cyberos-install-gui" "$INST"
+}
+
+@test "WizState.argv builds sudo -n cyberos-install with mode args and secrets are isolated" {
+  grep -q 'function argv()' "$INST/WizState.qml"
+  grep -qF '"/usr/local/bin/cyberos-install"' "$INST/WizState.qml"
+  grep -q 'function stdinSecrets()' "$INST/WizState.qml"
+  # stdinSecrets is the only function referencing `password` or `luksPass`
+  # for the purpose of building the secrets string (argv() must not).
+  argv_body=$(awk '/function argv\(\)/,/^    }/' "$INST/WizState.qml" | sed 's/--password-stdin//g')
+  ! grep -qE 'password|luksPass' <<<"$argv_body"
+}
+
+@test "ConfirmPage ports the summary lines and action text verbatim" {
+  [ -f "$INST/pages/ConfirmPage.qml" ]
+  grep -qF 'install alongside, using free space only' "$INST/pages/ConfirmPage.qml"
+  grep -qF 'ERASE the whole disk' "$INST/pages/ConfirmPage.qml"
+  grep -qF 'use the partitions chosen' "$INST/pages/ConfirmPage.qml"
+  grep -qF 'I understand and want to continue' "$INST/pages/ConfirmPage.qml"
+  grep -qF 'GiB swap' "$INST/pages/ConfirmPage.qml"
+  grep -qF 'Install' "$INST/pages/ConfirmPage.qml"
+}
+
+@test "InstallPage streams output, handles dry-run and failure text verbatim" {
+  [ -f "$INST/pages/InstallPage.qml" ]
+  grep -qF 'DRY RUN' "$INST/pages/InstallPage.qml"
+  grep -qF '(password supplied on stdin, not on the command line)' "$INST/pages/InstallPage.qml"
+  grep -qF 'Installation FAILED with exit code' "$INST/pages/InstallPage.qml"
+  grep -qF 'The error is in the output above.' "$INST/pages/InstallPage.qml"
+  grep -q 'SplitParser' "$INST/pages/InstallPage.qml"
+  grep -q 'stdinEnabled' "$INST/pages/InstallPage.qml"
+  grep -qF 'WizState.stdinSecrets()' "$INST/pages/InstallPage.qml"
+  ! grep -qF 'sh", "-c' "$INST/pages/InstallPage.qml"
+}
+
+@test "pages qmldir lists ConfirmPage and InstallPage" {
+  grep -q 'ConfirmPage' "$INST/pages/qmldir"
+  grep -q 'InstallPage' "$INST/pages/qmldir"
+}

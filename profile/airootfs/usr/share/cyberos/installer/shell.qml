@@ -5,7 +5,7 @@ import Quickshell
 import Quickshell.Io
 import "." as Cyber
 
-// CyberOS installer wizard -- Quickshell replacement for the GTK4/libadwaita
+// CyberOS installer wizard -- Quickshell replacement for the previous
 // cyberos-install-gui. The one rule carried over unchanged: this config does
 // no disk work of its own. It only collects answers into WizState; a later
 // task's install page runs `sudo -n cyberos-install ... --password-stdin
@@ -70,8 +70,16 @@ ShellRoot {
                     height: 30
                     radius: Cyber.Theme.radius / 2
                     color: backArea.containsMouse ? Cyber.Theme.sel : "transparent"
-                    border.width: 1
-                    border.color: Cyber.Theme.border
+                    border.width: backBtn.activeFocus ? 2 : 1
+                    border.color: backBtn.activeFocus ? Cyber.Theme.accent : Cyber.Theme.border
+                    // Keyboard-operable, not just mouse: Tab reaches this
+                    // button (skipped automatically while !visible, same as
+                    // every focusable QtQuick.Controls item already used
+                    // elsewhere in this wizard), Return/Enter activates it
+                    // exactly like a click.
+                    activeFocusOnTab: true
+                    Keys.onReturnPressed: Cyber.WizState.back()
+                    Keys.onEnterPressed: Cyber.WizState.back()
 
                     Text {
                         id: backLabel
@@ -100,6 +108,16 @@ ShellRoot {
                     radius: Cyber.Theme.radius / 2
                     color: nextBtn.enabled ? Cyber.Theme.accent : Cyber.Theme.border
                     opacity: nextBtn.enabled ? 1 : 0.5
+                    border.width: nextBtn.activeFocus ? 2 : 0
+                    border.color: Cyber.Theme.fg
+                    // Same keyboard-operable pattern as backBtn above.
+                    // `enabled: false` already keeps a disabled Next out of
+                    // the tab chain and blind to key events, same as any
+                    // other disabled QtQuick item -- no extra guard needed
+                    // in the handlers below.
+                    activeFocusOnTab: true
+                    Keys.onReturnPressed: Cyber.WizState.next()
+                    Keys.onEnterPressed: Cyber.WizState.next()
 
                     Text {
                         id: nextLabelText
@@ -130,7 +148,7 @@ ShellRoot {
         }
 
         // ---------------------------------------------------- guard message
-        // Copy text verbatim from the GTK wizard's main()'s Gtk.AlertDialog.
+        // Copy text verbatim from the GTK wizard's main()'s alert dialog.
         Rectangle {
             anchors.fill: parent
             visible: window.guardState === "blocked"
