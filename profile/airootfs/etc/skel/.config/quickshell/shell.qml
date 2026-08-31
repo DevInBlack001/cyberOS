@@ -55,6 +55,14 @@ ShellRoot {
         id: emoji
         Popups.EmojiPicker { onCloseRequested: emoji.active = false }
     }
+    LazyLoader {
+        id: calc
+        Popups.Calc { onCloseRequested: calc.active = false }
+    }
+    LazyLoader {
+        id: clip
+        Popups.ClipHist { onCloseRequested: clip.active = false }
+    }
     LazyLoader { id: osd; Osd.Osd {} }
 
     // Replaces mako. actionsSupported/imageSupported/bodySupported tell the
@@ -127,6 +135,22 @@ ShellRoot {
         target: "emoji"
         function toggle(): void {
             emoji.activeAsync ? emoji.active = false : emoji.activeAsync = true
+        }
+    }
+
+    // `qs ipc call calc toggle` -- replaces `rofi -show calc`.
+    IpcHandler {
+        target: "calc"
+        function toggle(): void {
+            calc.activeAsync ? calc.active = false : calc.activeAsync = true
+        }
+    }
+
+    // `qs ipc call clip toggle` -- replaces the cliphist|rofi|cliphist|wl-copy pipe.
+    IpcHandler {
+        target: "clip"
+        function toggle(): void {
+            clip.activeAsync ? clip.active = false : clip.activeAsync = true
         }
     }
 

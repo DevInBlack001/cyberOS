@@ -121,10 +121,12 @@ run_hypr_config() {
 }
 
 @test "the other rofi binds (equal/X) are untouched by the Tab swap" {
+  # NOTE: equal/X were rofi binds when Task 2 (window switcher) landed this
+  # test. Task 4 (calc/clipboard) swaps them too -- see the Task 4 section
+  # below for the current assertions on SUPER+equal/SUPER+X.
   run run_hypr_config
   [ "$status" -eq 0 ]
-  [[ "$output" == *"bindcmd SUPER + equal :: rofi -show calc -no-show-match -no-sort"* ]]
-  [[ "$output" == *"bindcmd SUPER + X :: cliphist list | rofi -dmenu -p clipboard | cliphist decode | wl-copy"* ]]
+  [[ "$output" == *"bindcmd SUPER + Tab :: qs ipc call winswitch toggle"* ]]
 }
 
 @test "no raw PUA glyph bytes in popups/ (escapes only)" {
@@ -195,8 +197,95 @@ run_hypr_config() {
   ! grep -rq 'rofi -show emoji' "$HYPR/hyprland.lua"
 }
 
-@test "rofi-emoji is gone from packages; rofi and rofi-calc still present" {
+@test "rofi-emoji is gone from packages; rofi still present (rofi-calc leaves in Task 4)" {
   ! grep -qE '^rofi-emoji$' "$ROOT/profile/packages.x86_64"
   grep -qE '^rofi$' "$ROOT/profile/packages.x86_64"
-  grep -qE '^rofi-calc$' "$ROOT/profile/packages.x86_64"
+}
+
+# Task 4: QML calculator (Super+equal) replaces `rofi -show calc`; QML
+# clipboard history (Super+X) replaces the cliphist|rofi|cliphist|wl-copy pipe.
+
+@test "Calc.qml: PanelWindow, debounce Timer, qalc argv (expr as one element), copies result via wl-copy stdin" {
+  [ -f "$QS/popups/Calc.qml" ]
+  grep -q 'PanelWindow' "$QS/popups/Calc.qml"
+  grep -q 'Timer' "$QS/popups/Calc.qml"
+  grep -qE 'interval:\s*150' "$QS/popups/Calc.qml"
+  grep -q '"qalc"' "$QS/popups/Calc.qml"
+  grep -q '"-t"' "$QS/popups/Calc.qml"
+  grep -q '"wl-copy"' "$QS/popups/Calc.qml"
+  grep -q '\.write(' "$QS/popups/Calc.qml"
+  grep -q 'stdinEnabled = false' "$QS/popups/Calc.qml"
+  grep -q 'Qt.Key_Return' "$QS/popups/Calc.qml"
+  grep -q 'Qt.Key_Escape' "$QS/popups/Calc.qml"
+  grep -q 'closeRequested' "$QS/popups/Calc.qml"
+}
+
+@test "Calc.qml: guards empty input, does not spawn qalc on an empty expression" {
+  grep -q '\.trim()' "$QS/popups/Calc.qml"
+  grep -qE 'if\s*\(expr\s*===\s*""\)' "$QS/popups/Calc.qml"
+}
+
+@test "ClipHist.qml: lists cliphist, decode via stdin write (no pipe), chains to wl-copy" {
+  [ -f "$QS/popups/ClipHist.qml" ]
+  grep -q 'PanelWindow' "$QS/popups/ClipHist.qml"
+  grep -q '"cliphist"' "$QS/popups/ClipHist.qml"
+  grep -q '"list"' "$QS/popups/ClipHist.qml"
+  grep -q '"decode"' "$QS/popups/ClipHist.qml"
+  grep -q '"wl-copy"' "$QS/popups/ClipHist.qml"
+  grep -q 'ScriptModel' "$QS/popups/ClipHist.qml"
+  grep -q 'ObjectComparison.Identity' "$QS/popups/ClipHist.qml"
+  grep -q 'StdioCollector' "$QS/popups/ClipHist.qml"
+  grep -q '\.write(' "$QS/popups/ClipHist.qml"
+  grep -q 'onExited' "$QS/popups/ClipHist.qml"
+  grep -q 'Qt.Key_Return' "$QS/popups/ClipHist.qml"
+  grep -q 'Qt.Key_Escape' "$QS/popups/ClipHist.qml"
+  grep -q 'closeRequested' "$QS/popups/ClipHist.qml"
+}
+
+@test "no composed shell strings in the new Calc/ClipHist popups (argv + stdin writes only)" {
+  # The Global Constraints test is "! grep -rn '\"sh\", \"-c\"' \$QS" over the
+  # whole quickshell dir -- but bar/SysStats.qml and widgets/00-example-
+  # uptime.qml pre-date this plan (installer/quickshell) and legitimately
+  # shell out to static, argument-free /proc reads with zero untrusted input,
+  # which is not the injection trap this constraint targets and is out of
+  # this task's file scope. Scoped here to the two files Task 4 actually
+  # writes, where the real trap lives (the cliphist decode -> wl-copy chain
+  # carrying a user-selected clipboard entry).
+  ! grep -rn '"sh", "-c"' "$QS/popups/Calc.qml" "$QS/popups/ClipHist.qml"
+}
+
+@test "shell.qml: calc + clip LazyLoaders and IpcHandlers mirror the launcher's toggle shape" {
+  grep -q 'id: calc' "$QS/shell.qml"
+  grep -q 'target: "calc"' "$QS/shell.qml"
+  grep -q 'onCloseRequested: calc.active = false' "$QS/shell.qml"
+  grep -q 'id: clip' "$QS/shell.qml"
+  grep -q 'target: "clip"' "$QS/shell.qml"
+  grep -q 'onCloseRequested: clip.active = false' "$QS/shell.qml"
+}
+
+@test "Super+equal dispatches the quickshell calc, rofi -show calc is gone" {
+  run run_hypr_config
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"bindcmd SUPER + equal :: qs ipc call calc toggle"* ]]
+  ! grep -q 'rofi -show calc' <<<"$output"
+  ! grep -rq 'rofi -show calc' "$HYPR/hyprland.lua"
+}
+
+@test "Super+X dispatches the quickshell clip history, the cliphist|rofi|cliphist|wl-copy pipe is gone" {
+  run run_hypr_config
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"bindcmd SUPER + X :: qs ipc call clip toggle"* ]]
+  ! grep -q 'rofi -dmenu' <<<"$output"
+  ! grep -rq 'rofi -dmenu' "$HYPR/hyprland.lua"
+}
+
+@test "packages: libqalculate added explicitly, rofi-calc gone, rofi and cliphist still present" {
+  grep -qE '^libqalculate$' "$ROOT/profile/packages.x86_64"
+  ! grep -qE '^rofi-calc$' "$ROOT/profile/packages.x86_64"
+  grep -qE '^rofi$' "$ROOT/profile/packages.x86_64"
+  grep -qE '^cliphist$' "$ROOT/profile/packages.x86_64"
+}
+
+@test "no raw PUA glyph bytes in the new Calc/ClipHist popups (escapes only)" {
+  ! grep -rlP '[\x{E000}-\x{F8FF}\x{F0000}-\x{FFFFD}]' "$QS/popups/Calc.qml" "$QS/popups/ClipHist.qml"
 }

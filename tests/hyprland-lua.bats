@@ -100,12 +100,18 @@ run_config() { lua -e "dofile('$STUB'); dofile('$HYPR/hyprland.lua'); report()";
   [[ "$output" == *"exec wl-paste --type image --watch cliphist store"* ]]
 }
 
-@test "Super+D opens the quickshell launcher; the still-rofi binds survive" {
+@test "Super+D opens the quickshell launcher" {
   run run_config
   [[ "$output" == *"bindcmd SUPER + D :: qs ipc call launcher toggle"* ]]
   ! grep -q 'bindcmd SUPER + D :: rofi' <<<"$output"
-  [[ "$output" == *"bindcmd SUPER + equal :: rofi -show calc -no-show-match -no-sort"* ]]
-  [[ "$output" == *"bindcmd SUPER + X :: cliphist list | rofi -dmenu -p clipboard | cliphist decode | wl-copy"* ]]
+}
+
+@test "Super+equal opens the quickshell calc, Super+X opens the quickshell clip history (Task 4)" {
+  run run_config
+  [[ "$output" == *"bindcmd SUPER + equal :: qs ipc call calc toggle"* ]]
+  [[ "$output" == *"bindcmd SUPER + X :: qs ipc call clip toggle"* ]]
+  ! grep -q 'rofi -show calc' <<<"$output"
+  ! grep -q 'rofi -dmenu' <<<"$output"
 }
 
 @test "Super+period opens the quickshell emoji picker; rofi -show emoji is gone" {
