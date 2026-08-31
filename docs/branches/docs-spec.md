@@ -1,6 +1,6 @@
 # Branch: `docs/spec`
 
-**State:** open · **Owner:** @edbron
+**State:** merged into `main` via PR #4 · **Owner:** @edbron
 
 ## Charter
 

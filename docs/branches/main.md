@@ -48,8 +48,7 @@ tools/                        # release tooling (arrives with channels/ and pack
 
 ## Known outstanding work on `main`
 
-- Uncommitted fix in the working tree: `cyberos-theme` must write the **active** palette to
-  both foot `[colors-light]` and `[colors-dark]` sections. Splitting them lets foot pick via
-  the appearance portal, which defaults to dark when no portal runs, so terminals opened
-  after switching to light came up dark. Verified on the host; not yet verified in a VM.
-- No install has been run from build #13.
+Nothing currently tracked here. Project-level gaps (release channels, the app store,
+open decisions D1-D4) live in `docs/SPEC.md`, not this file — this section is for
+tactical, main-specific state (an uncommitted fix, an unverified build) that would
+otherwise only live in someone's head.

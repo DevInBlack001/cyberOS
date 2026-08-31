@@ -52,7 +52,7 @@ including a terminal opened *after* the toggle.
 - **Emitting distinct `[colors-light]` and `[colors-dark]` sections is wrong for us.** foot
   then chooses between them via the appearance portal, and with no portal running it
   defaults to dark — so terminals came up dark in light mode. Write the **active** palette
-  into *both* sections. *(Fix is in `main`'s working tree, uncommitted.)*
+  into *both* sections. **Done** (`theme/foot-portal`, PR #5).
 - **Waybar restart races** (historical, pre-Quickshell). `pkill -x waybar; sleep 0.4;
   (setsid waybar &)`. The Quickshell bar has no such race: `Theme.qml` watches
   `theme.json` and re-themes live, no restart needed.

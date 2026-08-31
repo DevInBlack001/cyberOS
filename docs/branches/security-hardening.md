@@ -1,6 +1,6 @@
 # Branch: `security/hardening`
 
-**State:** planned · **Owner:** security owner · **Spec:** `docs/SPEC.md` §7
+**State:** merged into `main` via PR #6 · **Owner:** security owner · **Spec:** `docs/SPEC.md` §7
 **Plan:** `docs/superpowers/plans/2026-08-30-hardware-security-baseline.md`
 
 ## Charter
