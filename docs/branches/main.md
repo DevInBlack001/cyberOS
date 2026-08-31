@@ -38,8 +38,10 @@ tools/                        # release tooling (arrives with channels/ and pack
    calls `sudo` itself only for `mkarchiso`. It must be run by a human, because `sudo`
    cannot take a password from an agent session.
 3. Run the §6.2 test matrix. Every Tier 1 cell must pass.
-4. `git tag build-NN` for an engineering build, `git tag v2026.MM` for a stable snapshot.
-5. Push the tag. The ISO is **not** attached to the GitHub release — at ~4.7 GiB it is
+4. Move `CHANGELOG.md`'s `[Unreleased]` entries under a new `## [vYYYY.MM] - YYYY-MM-DD`
+   heading (or `## [build-NN]` for an engineering build).
+5. `git tag build-NN` for an engineering build, `git tag v2026.MM` for a stable snapshot.
+6. Push the tag. The ISO is **not** attached to the GitHub release — at ~4.7 GiB it is
    over GitHub's 2 GiB asset cap, and it cannot be shrunk to fit without gutting it
    (`docs/SPEC.md` §1.1). Publish it to the campus mirror and link it from the release
    notes.
