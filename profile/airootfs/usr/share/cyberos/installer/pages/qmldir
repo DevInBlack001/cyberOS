@@ -1,2 +1,5 @@
 Field 1.0 Field.qml
 Hint 1.0 Hint.qml
+CustomPage 1.0 CustomPage.qml
+AccountPage 1.0 AccountPage.qml
+OptionsPage 1.0 OptionsPage.qml

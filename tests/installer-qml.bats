@@ -51,3 +51,43 @@ QMLDIRS=/tmp/claude-1000/-home-edbron-Work/9fdca27c-4540-4321-9795-683d0bdd0a18/
   grep -q 'property string mode: "erase"' "$INST/WizState.qml"
   grep -q 'property int freeGib' "$INST/WizState.qml"
 }
+
+@test "validators port the exact rules and messages" {
+  grep -qF '[a-z_][a-z0-9_-]*' "$INST/pages/AccountPage.qml"
+  grep -qF 'Passwords do not match' "$INST/pages/AccountPage.qml"
+  grep -qF 'must be different partitions' "$INST/pages/CustomPage.qml"
+  grep -qF 'at least 8 characters' "$INST/pages/OptionsPage.qml"
+  grep -qF 'Africa/Accra' "$INST/pages/OptionsPage.qml"
+}
+
+@test "WizState carries custom/account/options answers with the right defaults" {
+  grep -q 'property string rootPart' "$INST/WizState.qml"
+  grep -q 'property string efiPart' "$INST/WizState.qml"
+  grep -q 'property bool formatEfi: false' "$INST/WizState.qml"
+  grep -q 'property string user: "student"' "$INST/WizState.qml"
+  grep -q 'property string host: "cyberos"' "$INST/WizState.qml"
+  grep -q 'property string password' "$INST/WizState.qml"
+  grep -q 'property string tz' "$INST/WizState.qml"
+  grep -q 'property string fs: "ext4"' "$INST/WizState.qml"
+  grep -q 'property int swapGib: 4' "$INST/WizState.qml"
+  grep -q 'property bool encrypt: false' "$INST/WizState.qml"
+  grep -q 'property string luksPass' "$INST/WizState.qml"
+}
+
+@test "custom/account/options pages pin the remaining exact copy" {
+  grep -qF 'No partitions on this disk. Create some first.' "$INST/pages/CustomPage.qml"
+  grep -qF 'Root (/)' "$INST/pages/CustomPage.qml"
+  grep -qF 'Will be formatted' "$INST/pages/CustomPage.qml"
+  grep -qF 'EFI system partition' "$INST/pages/CustomPage.qml"
+  grep -qF 'Format the EFI partition' "$INST/pages/CustomPage.qml"
+  grep -qF "Leave off to keep another OS's bootloader" "$INST/pages/CustomPage.qml"
+  grep -qF 'Username must be lowercase letters, digits, - or _' "$INST/pages/AccountPage.qml"
+  grep -qF 'Password cannot be empty' "$INST/pages/AccountPage.qml"
+  grep -qF 'Computer name cannot be empty' "$INST/pages/AccountPage.qml"
+  grep -qF 'TextInput.Password' "$INST/pages/AccountPage.qml"
+  grep -qF 'GiB, 0 for none' "$INST/pages/OptionsPage.qml"
+  grep -qF 'LUKS2. You will be asked for this passphrase at every boot.' "$INST/pages/OptionsPage.qml"
+  grep -qF 'An empty passphrase would produce a disk nobody can open.' "$INST/pages/OptionsPage.qml"
+  grep -qF 'The passphrases do not match.' "$INST/pages/OptionsPage.qml"
+  grep -qF 'TextInput.Password' "$INST/pages/OptionsPage.qml"
+}
