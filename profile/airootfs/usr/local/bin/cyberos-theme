@@ -170,10 +170,17 @@ WALL=/usr/share/backgrounds/cyberos/wallpaper-$MODE.png
 [[ -f $WALL ]] || WALL=/usr/share/backgrounds/cyberos/wallpaper.png
 printf '%s\n' "$MODE" > "$STATE"
 
-gsettings set org.gnome.desktop.interface color-scheme \
-  "$([[ $MODE == dark ]] && echo prefer-dark || echo prefer-light)" 2>/dev/null || true
-gsettings set org.gnome.desktop.interface gtk-theme \
-  "$([[ $MODE == dark ]] && echo Adwaita-dark || echo Adwaita)" 2>/dev/null || true
+# GNOME's settings CLI left with the GNOME packages. Firefox (GTK3) reads
+# settings.ini directly; Qt apps follow qt6ct's palette. Neither picks the
+# change up until the app restarts -- same as the old settings-daemon path
+# without a settings portal.
+GTK3INI=$CFG/gtk-3.0/settings.ini
+[[ -f $GTK3INI ]] && sed -i \
+  "s/^gtk-application-prefer-dark-theme=.*/gtk-application-prefer-dark-theme=$([[ $MODE == dark ]] && echo 1 || echo 0)/" \
+  "$GTK3INI"
+QT6CT_SCHEME=/usr/share/qt6ct/colors/$([[ $MODE == dark ]] && echo darker || echo airy).conf
+[[ -f $QT6CT_SCHEME && -f $CFG/qt6ct/qt6ct.conf ]] && sed -i \
+  "s#^color_scheme_path=.*#color_scheme_path=$QT6CT_SCHEME#" "$CFG/qt6ct/qt6ct.conf"
 
 if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
   hyprctl reload >/dev/null 2>&1 || true
