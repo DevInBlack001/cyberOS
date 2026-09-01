@@ -229,3 +229,13 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   run grep -RE 'execDetached\(\["(gtk-launch|blueman|nm-applet|nm-connection-editor|pavucontrol")' "$QS"
   [ "$status" -ne 0 ]
 }
+
+@test "launcher groups apps into categories with a Security group" {
+  grep -q '"Security", "Development", "Internet"' "$QS/launcher/Launcher.qml"
+  grep -q 'function groupOf' "$QS/launcher/Launcher.qml"
+  grep -q 'activeGroup' "$QS/launcher/Launcher.qml"
+  grep -q '"Wireshark": "Security"' "$QS/launcher/Launcher.qml"
+  d="$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/share/applications/metasploit.desktop"
+  grep -q 'Categories=Security;' "$d"
+  grep -q 'Exec=foot' "$d"
+}

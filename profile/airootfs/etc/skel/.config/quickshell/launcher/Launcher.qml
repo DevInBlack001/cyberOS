@@ -22,21 +22,54 @@ PanelWindow {
 
     anchors { left: false; right: false; top: false; bottom: false }
     implicitWidth: 560
-    implicitHeight: 420
+    implicitHeight: 460
     color: "transparent"
     focusable: true
     aboveWindows: true
 
     readonly property int columns: 5
 
-    // Filtered + sorted app list. Recomputes whenever the filter text
-    // changes (the read of `filterField.text` below establishes that
-    // binding dependency); noDisplay entries are dropped, case-insensitive
-    // substring match on name, alphabetical order.
+    // Category chips. First match in priority order wins; anything unmatched
+    // lands in Utilities. freedesktop "Security" is a registered additional
+    // category -- our own .desktop entries (metasploit.desktop) set it, and
+    // nameOverrides catches shipped tools whose upstream Categories don't
+    // (wireshark says Network;Monitor).
+    readonly property var groups: ["All", "Security", "Development", "Internet",
+        "Office", "Graphics", "Media", "System", "Utilities"]
+    property string activeGroup: "All"
+
+    readonly property var nameOverrides: ({
+        "Wireshark": "Security",
+        "Ghidra": "Security"
+    })
+
+    function groupOf(entry) {
+        const o = nameOverrides[entry.name];
+        if (o !== undefined) return o;
+        const c = entry.categories;
+        const has = list => list.some(x => c.includes(x));
+        if (has(["Security"])) return "Security";
+        if (has(["Development", "IDE", "Debugger", "RevisionControl"])) return "Development";
+        if (has(["Network", "WebBrowser", "Email", "P2P"])) return "Internet";
+        if (has(["Office", "WordProcessor", "Spreadsheet", "Presentation"])) return "Office";
+        if (has(["Graphics", "Photography"])) return "Graphics";
+        if (has(["AudioVideo", "Audio", "Video", "Player"])) return "Media";
+        if (has(["System", "Settings", "HardwareSettings", "Monitor",
+                 "TerminalEmulator", "FileManager", "Emulator"])) return "System";
+        return "Utilities";
+    }
+
+    // Filtered + sorted app list. Recomputes whenever the filter text or
+    // active category changes (the reads of `filterField.text` and
+    // `root.activeGroup` below each establish a binding dependency);
+    // noDisplay entries are dropped, case-insensitive substring match on
+    // name, alphabetical order.
     readonly property var filtered: {
         const q = filterField.text.trim().toLowerCase();
         return DesktopEntries.applications.values
-            .filter(a => !a.noDisplay && (q === "" || a.name.toLowerCase().includes(q)))
+            .filter(a => !a.noDisplay
+                && (root.activeGroup === "All" || root.groupOf(a) === root.activeGroup)
+                && (q === "" || a.name.toLowerCase().includes(q)))
             .sort((a, b) => a.name.localeCompare(b.name));
     }
     // Re-select the first result whenever the filtered set changes (every
@@ -101,6 +134,18 @@ PanelWindow {
                         grid.moveCurrentIndexRight();
                         event.accepted = true;
                         break;
+                    case Qt.Key_Tab: {
+                        const i = root.groups.indexOf(root.activeGroup);
+                        root.activeGroup = root.groups[(i + 1) % root.groups.length];
+                        event.accepted = true;
+                        break;
+                    }
+                    case Qt.Key_Backtab: {
+                        const i = root.groups.indexOf(root.activeGroup);
+                        root.activeGroup = root.groups[(i - 1 + root.groups.length) % root.groups.length];
+                        event.accepted = true;
+                        break;
+                    }
                     case Qt.Key_Return:
                     case Qt.Key_Enter:
                         root.launch(root.filtered[grid.currentIndex]);
@@ -110,6 +155,36 @@ PanelWindow {
                         root.closeRequested();
                         event.accepted = true;
                         break;
+                    }
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 4
+                Repeater {
+                    model: root.groups
+                    delegate: Rectangle {
+                        id: chip
+                        required property string modelData
+                        implicitWidth: chipLabel.implicitWidth + 14
+                        implicitHeight: chipLabel.implicitHeight + 8
+                        radius: height / 2
+                        color: root.activeGroup === chip.modelData ? Cyber.Theme.sel : "transparent"
+                        border.width: 1
+                        border.color: root.activeGroup === chip.modelData ? Cyber.Theme.accent : Cyber.Theme.border
+
+                        Text {
+                            id: chipLabel
+                            anchors.centerIn: parent
+                            text: chip.modelData
+                            color: root.activeGroup === chip.modelData ? Cyber.Theme.fg : Cyber.Theme.muted
+                            font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 3 }
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: root.activeGroup = chip.modelData
+                        }
                     }
                 }
             }
