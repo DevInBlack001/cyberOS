@@ -20,7 +20,12 @@ FloatingWindow {
 
     property string path: ""
     readonly property string fileName: root.path.split("/").pop()
-    readonly property string dirPath: root.path.substring(0, root.path.lastIndexOf("/"))
+    readonly property string dirPath: {
+        const cut = root.path.lastIndexOf("/");
+        // cut === 0 means the file sits at the filesystem root, whose
+        // directory is "/" -- not "" , which would disable the folder walk.
+        return cut <= 0 ? "/" : root.path.substring(0, cut);
+    }
 
     title: root.path === "" ? "Images"
         : root.fileName + "  —  " + img.sourceSize.width + "×" + img.sourceSize.height
@@ -76,9 +81,6 @@ FloatingWindow {
             source: root.path === "" ? "" : "file://" + root.path
             fillMode: Image.PreserveAspectFit
             asynchronous: true
-            // Big photos on a software-rendered VM: cap the decode, keep the
-            // smooth filter for the common downscale.
-            sourceSize.width: 4096
             smooth: true
 
             // Anchors beat x/y in Qt Quick, so an anchored item cannot be

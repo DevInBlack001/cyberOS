@@ -22,7 +22,7 @@ import "../" as Cyber
 FloatingWindow {
     id: root
 
-    property string path: Quickshell.env("HOME") || "/"
+    property string path: root.home
 
     title: "Files  —  " + root.path
     implicitWidth: 1000
@@ -30,13 +30,15 @@ FloatingWindow {
     minimumSize: Qt.size(560, 360)
     color: Cyber.Theme.bg
 
+    readonly property string home: Quickshell.env("HOME") || "/"
+
     readonly property var places: [
-        { name: "Home",      dir: Quickshell.env("HOME") || "/" },
-        { name: "Desktop",   dir: (Quickshell.env("HOME") || "") + "/Desktop" },
-        { name: "Documents", dir: (Quickshell.env("HOME") || "") + "/Documents" },
-        { name: "Downloads", dir: (Quickshell.env("HOME") || "") + "/Downloads" },
-        { name: "Pictures",  dir: (Quickshell.env("HOME") || "") + "/Pictures" },
-        { name: "Projects",  dir: (Quickshell.env("HOME") || "") + "/Projects" }
+        { name: "Home",      dir: root.home },
+        { name: "Desktop",   dir: root.home + "/Desktop" },
+        { name: "Documents", dir: root.home + "/Documents" },
+        { name: "Downloads", dir: root.home + "/Downloads" },
+        { name: "Pictures",  dir: root.home + "/Pictures" },
+        { name: "Projects",  dir: root.home + "/Projects" }
     ]
 
     readonly property var archiveSuffixes: ["zip", "7z", "gz", "bz2", "xz", "tar", "rar", "tgz"]
@@ -181,6 +183,15 @@ FloatingWindow {
                 Keys.onPressed: event => {
                     if (event.key === Qt.Key_Backspace) { root.goUp(); event.accepted = true; }
                     else if (event.key === Qt.Key_Escape) { root.visible = false; event.accepted = true; }
+                    else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        // Open whatever the arrow keys have selected. Without
+                        // this the grid is mouse-only.
+                        if (grid.currentIndex >= 0) {
+                            root.openEntry(dir.get(grid.currentIndex, "filePath"),
+                                           dir.get(grid.currentIndex, "fileIsDir"));
+                        }
+                        event.accepted = true;
+                    }
                 }
 
                 delegate: Item {
@@ -198,7 +209,11 @@ FloatingWindow {
                     Rectangle {
                         anchors { fill: parent; margins: 4 }
                         radius: Cyber.Theme.radius / 2
-                        color: cellMouse.containsMouse ? Cyber.Theme.sel : "transparent"
+                        // Highlight the keyboard-focused cell as well as the
+                        // hovered one, otherwise arrow-key navigation is
+                        // invisible and Return has no discoverable target.
+                        color: cellMouse.containsMouse || cell.GridView.isCurrentItem
+                            ? Cyber.Theme.sel : "transparent"
 
                         ColumnLayout {
                             anchors { fill: parent; margins: 6 }
@@ -228,7 +243,10 @@ FloatingWindow {
                             anchors.fill: parent
                             hoverEnabled: true
                             acceptedButtons: Qt.LeftButton | Qt.RightButton
-                            onDoubleClicked: root.openEntry(cell.filePath, cell.fileIsDir)
+                            onDoubleClicked: mouse => {
+                                if (mouse.button === Qt.LeftButton)
+                                    root.openEntry(cell.filePath, cell.fileIsDir);
+                            }
                             onClicked: mouse => { if (mouse.button === Qt.RightButton) ctx.popup(); }
                         }
 

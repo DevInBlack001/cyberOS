@@ -65,10 +65,22 @@ PanelWindow {
             elide: Text.ElideRight
         }
         Slider {
+            id: slider
             Layout.fillWidth: true
             from: 0; to: 1
             value: row.node?.audio.volume ?? 0
             onMoved: if (row.node) row.node.audio.volume = value
+            // Dragging writes `value` and severs the binding above, so an
+            // external change (bar scroll chip, XF86 keys, another app) would
+            // stop moving the slider for the rest of this panel's life.
+            // Re-assert it whenever the node's own volume changes and the
+            // user is not currently dragging.
+            Connections {
+                target: row.node?.audio ?? null
+                function onVolumeChanged() {
+                    if (!slider.pressed) slider.value = row.node.audio.volume;
+                }
+            }
         }
         Text {
             Layout.preferredWidth: 34
@@ -99,120 +111,125 @@ PanelWindow {
         focus: true
         Keys.onEscapePressed: root.closeRequested()
 
-        ColumnLayout {
+        ScrollView {
+            id: scroll
             anchors.fill: parent
             anchors.margins: 12
-            spacing: 10
 
-            Text {
-                text: "Sound"
-                color: Cyber.Theme.fg
-                font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize + 2; bold: true }
-            }
+            ColumnLayout {
+                width: scroll.availableWidth
+                spacing: 10
 
-            // ---- output devices ----
-            Text {
-                text: "Output"
-                color: Cyber.Theme.accent
-                font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 2 }
-            }
-            Text {
-                visible: root.sinks.length === 0
-                text: "No output devices"
-                color: Cyber.Theme.muted
-                font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 1 }
-            }
-            Repeater {
-                model: root.sinks
-                delegate: ColumnLayout {
-                    id: sinkEntry
-                    required property var modelData
-                    Layout.fillWidth: true
-                    spacing: 2
+                Text {
+                    text: "Sound"
+                    color: Cyber.Theme.fg
+                    font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize + 2; bold: true }
+                }
 
-                    // The device-select click target is this name row ONLY,
-                    // never the whole entry: a MouseArea covering the entry
-                    // would sit over the volume slider below and eat its
-                    // drag. The MouseArea is also parented to a plain Item,
-                    // not to the RowLayout -- a MouseArea placed directly in
-                    // a layout is laid out as a cell of it.
-                    Item {
+                // ---- output devices ----
+                Text {
+                    text: "Output"
+                    color: Cyber.Theme.accent
+                    font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 2 }
+                }
+                Text {
+                    visible: root.sinks.length === 0
+                    text: "No output devices"
+                    color: Cyber.Theme.muted
+                    font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 1 }
+                }
+                Repeater {
+                    model: root.sinks
+                    delegate: ColumnLayout {
+                        id: sinkEntry
+                        required property var modelData
                         Layout.fillWidth: true
-                        implicitHeight: 22
+                        spacing: 2
 
-                        RowLayout {
-                            anchors.fill: parent
-                            spacing: 6
-                            // dot-circle when selected, circle when not; both
-                            // cmap-verified in JetBrainsMono Nerd Font.
-                            Text {
-                                text: Pipewire.defaultAudioSink === sinkEntry.modelData ? "\uf192" : "\uf111"
-                                color: Pipewire.defaultAudioSink === sinkEntry.modelData
-                                    ? Cyber.Theme.accent : Cyber.Theme.muted
-                                font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 2 }
+                        // The device-select click target is this name row ONLY,
+                        // never the whole entry: a MouseArea covering the entry
+                        // would sit over the volume slider below and eat its
+                        // drag. The MouseArea is also parented to a plain Item,
+                        // not to the RowLayout -- a MouseArea placed directly in
+                        // a layout is laid out as a cell of it.
+                        Item {
+                            Layout.fillWidth: true
+                            implicitHeight: 22
+
+                            RowLayout {
+                                anchors.fill: parent
+                                spacing: 6
+                                // dot-circle when selected, circle when not; both
+                                // cmap-verified in JetBrainsMono Nerd Font.
+                                Text {
+                                    text: Pipewire.defaultAudioSink === sinkEntry.modelData ? "\uf192" : "\uf111"
+                                    color: Pipewire.defaultAudioSink === sinkEntry.modelData
+                                        ? Cyber.Theme.accent : Cyber.Theme.muted
+                                    font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 2 }
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: root.labelFor(sinkEntry.modelData)
+                                    color: Cyber.Theme.fg
+                                    font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 1 }
+                                    elide: Text.ElideRight
+                                }
                             }
-                            Text {
-                                Layout.fillWidth: true
-                                text: root.labelFor(sinkEntry.modelData)
-                                color: Cyber.Theme.fg
-                                font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 1 }
-                                elide: Text.ElideRight
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: Pipewire.preferredDefaultAudioSink = sinkEntry.modelData
                             }
                         }
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: Pipewire.preferredDefaultAudioSink = sinkEntry.modelData
-                        }
+                        VolumeRow { node: sinkEntry.modelData; label: "" }
                     }
-                    VolumeRow { node: sinkEntry.modelData; label: "" }
                 }
-            }
 
-            // ---- application streams ----
-            Text {
-                text: "Applications"
-                color: Cyber.Theme.accent
-                font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 2 }
-            }
-            Text {
-                visible: root.streams.length === 0
-                text: "Nothing is playing"
-                color: Cyber.Theme.muted
-                font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 1 }
-            }
-            Repeater {
-                model: root.streams
-                delegate: VolumeRow {
-                    required property var modelData
-                    node: modelData
-                    label: root.labelFor(modelData)
+                // ---- application streams ----
+                Text {
+                    text: "Applications"
+                    color: Cyber.Theme.accent
+                    font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 2 }
                 }
-            }
+                Text {
+                    visible: root.streams.length === 0
+                    text: "Nothing is playing"
+                    color: Cyber.Theme.muted
+                    font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 1 }
+                }
+                Repeater {
+                    model: root.streams
+                    delegate: VolumeRow {
+                        required property var modelData
+                        node: modelData
+                        label: root.labelFor(modelData)
+                    }
+                }
 
-            // ---- input ----
-            Text {
-                text: "Input"
-                color: Cyber.Theme.accent
-                font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 2 }
-            }
-            VolumeRow {
-                visible: root.source !== null
-                node: root.source
-                label: root.source ? root.labelFor(root.source) : ""
-            }
-            Text {
-                visible: root.source === null
-                text: "No input device"
-                color: Cyber.Theme.muted
-                font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 1 }
-            }
+                // ---- input ----
+                Text {
+                    text: "Input"
+                    color: Cyber.Theme.accent
+                    font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 2 }
+                }
+                VolumeRow {
+                    visible: root.source !== null
+                    node: root.source
+                    label: root.source ? root.labelFor(root.source) : ""
+                }
+                Text {
+                    visible: root.source === null
+                    text: "No input device"
+                    color: Cyber.Theme.muted
+                    font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 1 }
+                }
 
-            Item { Layout.fillHeight: true }
+                Item { Layout.fillHeight: true }
 
-            Text {
-                text: "Click a device to make it default · Esc to close"
-                color: Cyber.Theme.muted
-                font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 3 }
+                Text {
+                    text: "Click a device to make it default · Esc to close"
+                    color: Cyber.Theme.muted
+                    font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 3 }
+                }
             }
         }
     }
