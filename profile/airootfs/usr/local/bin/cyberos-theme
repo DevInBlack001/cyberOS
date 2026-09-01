@@ -171,16 +171,30 @@ WALL=/usr/share/backgrounds/cyberos/wallpaper-$MODE.png
 printf '%s\n' "$MODE" > "$STATE"
 
 # GNOME's settings CLI left with the GNOME packages. Firefox (GTK3) reads
-# settings.ini directly; Qt apps follow qt6ct's palette. Neither picks the
-# change up until the app restarts -- same as the old settings-daemon path
-# without a settings portal.
+# settings.ini directly and the KDE portal reads kdeglobals; Qt apps follow
+# qt6ct's palette. None of them pick the change up until the app restarts --
+# same as the old settings-daemon path without a settings portal.
 GTK3INI=$CFG/gtk-3.0/settings.ini
-[[ -f $GTK3INI ]] && sed -i \
-  "s/^gtk-application-prefer-dark-theme=.*/gtk-application-prefer-dark-theme=$([[ $MODE == dark ]] && echo 1 || echo 0)/" \
-  "$GTK3INI"
+if [[ -f $GTK3INI ]]; then
+  if [[ $MODE == dark ]]; then
+    sed -i -e 's/^gtk-application-prefer-dark-theme=.*/gtk-application-prefer-dark-theme=1/' \
+           -e 's/^gtk-theme-name=.*/gtk-theme-name=Adwaita-dark/' \
+           -e 's/^gtk-icon-theme-name=.*/gtk-icon-theme-name=Papirus-Dark/' "$GTK3INI"
+  else
+    sed -i -e 's/^gtk-application-prefer-dark-theme=.*/gtk-application-prefer-dark-theme=0/' \
+           -e 's/^gtk-theme-name=.*/gtk-theme-name=Adwaita/' \
+           -e 's/^gtk-icon-theme-name=.*/gtk-icon-theme-name=Papirus/' "$GTK3INI"
+  fi
+fi
+# The KDE FileChooser/Settings portal serves org.freedesktop.appearance from
+# kdeglobals; nothing else on this ISO writes that file, so owning it outright
+# is safe. KDE apps themselves follow qt6ct, not this.
+printf '[General]\nColorScheme=%s\n' "$([[ $MODE == dark ]] && echo BreezeDark || echo BreezeLight)" > "$CFG/kdeglobals"
 QT6CT_SCHEME=/usr/share/qt6ct/colors/$([[ $MODE == dark ]] && echo darker || echo airy).conf
-[[ -f $QT6CT_SCHEME && -f $CFG/qt6ct/qt6ct.conf ]] && sed -i \
-  "s#^color_scheme_path=.*#color_scheme_path=$QT6CT_SCHEME#" "$CFG/qt6ct/qt6ct.conf"
+if [[ -f $QT6CT_SCHEME && -f $CFG/qt6ct/qt6ct.conf ]]; then
+  sed -i -e "s#^color_scheme_path=.*#color_scheme_path=$QT6CT_SCHEME#" \
+         -e "s/^icon_theme=.*/icon_theme=$([[ $MODE == dark ]] && echo Papirus-Dark || echo Papirus)/" "$CFG/qt6ct/qt6ct.conf"
+fi
 
 if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
   hyprctl reload >/dev/null 2>&1 || true

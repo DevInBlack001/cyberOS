@@ -79,7 +79,7 @@ run_config() { lua -e "dofile('$STUB'); dofile('$HYPR/hyprland.lua'); report()";
   [[ "$output" == *"bindcmd XF86AudioMute :: qs ipc call osd volumeMute"* ]]
   [[ "$output" == *"bindcmd XF86MonBrightnessUp :: qs ipc call osd brightnessUp"* ]]
   [[ "$output" == *"bindcmd XF86MonBrightnessDown :: qs ipc call osd brightnessDown"* ]]
-  ! grep -q swayosd <<<"$output"
+  [[ "$output" != *"swayosd"* ]]
 }
 
 @test "the quickshell layer gets a layer_rule keyed on its own namespace" {
@@ -110,7 +110,7 @@ run_config() { lua -e "dofile('$STUB'); dofile('$HYPR/hyprland.lua'); report()";
 @test "Super+D opens the quickshell launcher" {
   run run_config
   [[ "$output" == *"bindcmd SUPER + D :: qs ipc call launcher toggle"* ]]
-  ! grep -q 'bindcmd SUPER + D :: rofi' <<<"$output"
+  [[ "$output" != *"bindcmd SUPER + D :: rofi"* ]]
 }
 
 @test "Super+equal opens the quickshell calc, Super+X opens the quickshell clip history (Task 4)" {

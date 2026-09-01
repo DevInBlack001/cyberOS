@@ -66,4 +66,8 @@ PY
   grep -q 'gtk-application-prefer-dark-theme' "$t"
   grep -q 'qt6ct.conf' "$t"
   grep -q 'color_scheme_path' "$t"
+  grep -q 'gtk-theme-name=.*Adwaita-dark' "$t"
+  grep -q 'gtk-icon-theme-name=.*Papirus' "$t"
+  grep -q 'kdeglobals' "$t"
+  grep -q 'icon_theme=' "$t"
 }
