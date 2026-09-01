@@ -34,13 +34,22 @@ PanelWindow {
     exclusionMode: ExclusionMode.Ignore
     aboveWindows: true
 
-    // Cap at 20 visible notifications. Critical notifications never auto-expire
-    // (NotifyCard.qml), so a local process flooding the session bus with critical
-    // urgency could grow this stack without bound. Slice from the end so the
-    // newest notifications are the ones shown.
-    readonly property var tracked: {
-        const all = root.server ? root.server.trackedNotifications.values : [];
-        return all.length > 20 ? all.slice(all.length - 20) : all;
+    readonly property var tracked: root.server ? root.server.trackedNotifications.values : []
+
+    // Trim at the server level so excess notifications are dismissed/dismissed from root.server
+    // rather than stranded in the uncapped server list without a delegate or timer.
+    Connections {
+        target: root.server ? root.server.trackedNotifications : null
+        function onValuesChanged() {
+            if (!root.server) return;
+            const all = root.server.trackedNotifications.values;
+            if (all.length > 20) {
+                const overflow = all.length - 20;
+                for (let i = 0; i < overflow; i++) {
+                    all[i].dismiss();
+                }
+            }
+        }
     }
 
     // Hidden entirely -- not just empty -- whenever there is nothing to
