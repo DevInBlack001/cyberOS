@@ -42,7 +42,7 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
 @test "audio: pipewire sink with tracker, click/right-click/scroll behaviours" {
   grep -q 'Pipewire.defaultAudioSink' "$QS/bar/Audio.qml"
   grep -q 'PwObjectTracker' "$QS/bar/Audio.qml"
-  grep -q 'pavucontrol' "$QS/bar/Audio.qml"
+  grep -q 'pavucontrol-qt' "$QS/bar/Audio.qml"
 }
 
 @test "battery: hidden on desktops, warn/critical colours from Theme" {
@@ -222,5 +222,10 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   grep -q 'target: "bt"' "$QS/shell.qml"
   grep -q '"bt", "toggle"' "$QS/bar/BluetoothChip.qml"
   run grep 'blueman' "$QS/bar/BluetoothChip.qml"
+  [ "$status" -ne 0 ]
+}
+
+@test "no GTK app launch paths remain anywhere in the shell" {
+  run grep -RE 'execDetached\(\["(gtk-launch|blueman|nm-applet|nm-connection-editor|pavucontrol")' "$QS"
   [ "$status" -ne 0 ]
 }
