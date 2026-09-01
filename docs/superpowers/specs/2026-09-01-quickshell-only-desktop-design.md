@@ -84,7 +84,7 @@ Both are toolkit-agnostic CLI additions, not apps:
 
 A `FloatingWindow`, default 1000×640, opened by `Super+E` and by `qs ipc call files open <path>`.
 
-- **Sidebar:** XDG user dirs only (Home, Desktop, Documents, Downloads, Pictures, Projects), read from `~/.config/user-dirs.dirs`. Removable media is v2 — enumerating it needs a UDisks2 D-Bus binding Quickshell does not expose, so it would mean hand-rolling D-Bus calls, which is out of scope for v1.
+- **Sidebar:** a fixed list — Home, Desktop, Documents, Downloads, Pictures, Projects — resolved against `$HOME`. **Not** parsed from `~/.config/user-dirs.dirs`: that file does not exist in the live session (verified — `xdg-user-dirs-update` only runs at firstboot on an *installed* system, while `customize_airootfs.sh:13` creates exactly these five directories for the live user). A fixed list is correct on both. Removable media is v2 — enumerating it needs a UDisks2 D-Bus binding Quickshell does not expose.
 - **Main view:** grid of entries from `FolderListModel` with `showDirsFirst: true`, icons via `Quickshell.iconPath()` (folder icon for dirs, mime-generic for files), name elided to one line.
 - **Navigation:** double-click a directory to enter; Backspace or a breadcrumb click to go up; the breadcrumb is the path split on `/`.
 - **Opening files:** `Quickshell.execDetached(["xdg-open", path])`.
