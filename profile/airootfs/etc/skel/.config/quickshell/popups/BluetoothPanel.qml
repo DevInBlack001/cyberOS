@@ -121,12 +121,14 @@ PanelWindow {
                         Text {
                             Layout.fillWidth: true
                             text: row.modelData.name || row.modelData.deviceName || row.modelData.address
+                            textFormat: Text.PlainText
                             color: row.modelData.connected ? Cyber.Theme.accent : Cyber.Theme.fg
                             font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize }
                             elide: Text.ElideRight
                         }
                         Text {
                             text: root.statusText(row.modelData)
+                            textFormat: Text.PlainText
                             color: Cyber.Theme.muted
                             font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 2 }
                         }

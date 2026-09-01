@@ -229,6 +229,7 @@ FloatingWindow {
                             Text {
                                 Layout.fillWidth: true
                                 text: cell.fileName
+                                textFormat: Text.PlainText
                                 color: Cyber.Theme.fg
                                 font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 3 }
                                 horizontalAlignment: Text.AlignHCenter

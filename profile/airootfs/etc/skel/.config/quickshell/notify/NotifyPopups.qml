@@ -34,7 +34,14 @@ PanelWindow {
     exclusionMode: ExclusionMode.Ignore
     aboveWindows: true
 
-    readonly property var tracked: root.server ? root.server.trackedNotifications.values : []
+    // Cap at 20 visible notifications. Critical notifications never auto-expire
+    // (NotifyCard.qml), so a local process flooding the session bus with critical
+    // urgency could grow this stack without bound. Slice from the end so the
+    // newest notifications are the ones shown.
+    readonly property var tracked: {
+        const all = root.server ? root.server.trackedNotifications.values : [];
+        return all.length > 20 ? all.slice(all.length - 20) : all;
+    }
 
     // Hidden entirely -- not just empty -- whenever there is nothing to
     // show or DND is on, so no layer surface is mapped at all in either

@@ -123,6 +123,7 @@ PanelWindow {
                             Text {
                                 Layout.fillWidth: true
                                 text: row.modelData.name
+                                textFormat: Text.PlainText
                                 color: row.modelData.connected ? Cyber.Theme.accent : Cyber.Theme.fg
                                 font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize }
                                 elide: Text.ElideRight

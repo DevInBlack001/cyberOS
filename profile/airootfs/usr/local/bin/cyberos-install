@@ -575,7 +575,7 @@ if [[ $DRY_RUN -eq 0 ]]; then
     for p_ in $ROOTP $EFIP $HOMEP; do grep -q "^$p_ " /proc/mounts && die "$p_ is mounted — unmount it first"; done
     [[ $ROOTP != "$EFIP" && $ROOTP != "$HOMEP" ]] || die "root/efi/home must be different partitions"
   else
-    grep -q "^$DISK" /proc/mounts 2>/dev/null && die "$DISK is mounted — unmount it first"
+    grep -qE "^${DISK}(p?[0-9]| )" /proc/mounts 2>/dev/null && die "$DISK is mounted -- unmount it first"
   fi
 fi
 
