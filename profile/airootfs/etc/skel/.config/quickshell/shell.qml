@@ -79,6 +79,10 @@ ShellRoot {
         Popups.Mixer { onCloseRequested: mixer.active = false }
     }
     LazyLoader {
+        id: powerprofile
+        Popups.PowerPanel { onCloseRequested: powerprofile.active = false }
+    }
+    LazyLoader {
         id: images
         Apps.Images {}
     }
@@ -198,6 +202,16 @@ ShellRoot {
         target: "mixer"
         function toggle(): void {
             mixer.activeAsync ? mixer.active = false : mixer.activeAsync = true
+        }
+    }
+
+    // `qs ipc call powerprofile toggle` -- the battery chip's panel: live
+    // charge/discharge in watts plus the power-profiles-daemon mode. The
+    // sleep/lock/restart/shutdown menu stays on the bar's own power button.
+    IpcHandler {
+        target: "powerprofile"
+        function toggle(): void {
+            powerprofile.activeAsync ? powerprofile.active = false : powerprofile.activeAsync = true
         }
     }
 

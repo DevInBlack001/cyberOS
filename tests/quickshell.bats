@@ -56,22 +56,23 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
 }
 
 @test "parity: every waybar right-side module has a quickshell counterpart" {
-  for f in Tray.qml Brightness.qml BluetoothChip.qml Audio.qml Network.qml SysStats.qml Battery.qml ClockChip.qml; do
+  # Brightness has no chip: the XF86 keys drive the OSD directly, and the
+  # half-circle brightness glyph read as a stray moon in the bar.
+  for f in Tray.qml BluetoothChip.qml Audio.qml Network.qml SysStats.qml Battery.qml ClockChip.qml; do
     [ -f "$QS/bar/$f" ]
   done
 }
 
-@test "brightness chip: reads brightnessctl, hides with no device, scroll adjusts" {
-  grep -q 'brightnessctl' "$QS/bar/Brightness.qml"
-  grep -q 'hasDevice' "$QS/bar/Brightness.qml"
-  grep -q 'visible: hasDevice' "$QS/bar/Brightness.qml"
-  grep -q 'onScrolled' "$QS/bar/Brightness.qml"
-  grep -q 'execDetached' "$QS/bar/Brightness.qml"
+@test "brightness has no bar chip; the XF86 keys drive the OSD instead" {
+  [ ! -f "$QS/bar/Brightness.qml" ]
+  grep -q 'brightnessctl' "$QS/shell.qml"
+  grep -q 'function brightnessUp' "$QS/shell.qml"
+  grep -q 'function brightnessDown' "$QS/shell.qml"
 }
 
-@test "bar: Brightness sits between Tray and BluetoothChip (waybar order)" {
+@test "bar: Tray is followed directly by BluetoothChip (brightness chip removed)" {
   awk '/RowLayout {/{f++} f==2 && /Tray|Brightness|BluetoothChip/{print; if (/BluetoothChip/) exit}' "$QS/bar/Bar.qml" \
-    | tr -d ' \t\n' | grep -q 'Tray{}Brightness{}BluetoothChip{}'
+    | tr -d ' \t\n' | grep -q 'Tray{}BluetoothChip{}'
 }
 
 @test "power menu replaces the rofi script with the same four actions" {
