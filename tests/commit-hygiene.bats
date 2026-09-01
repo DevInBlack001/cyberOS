@@ -101,3 +101,26 @@ HOOK="$ROOT/.githooks/commit-msg"
   grep -q 'CONTRIBUTING.md' "$ROOT/README.md"
   ! grep -q '^| `installer/` |' "$ROOT/README.md"
 }
+
+# The agent files are pointers, not a third copy of the rules. If one grows
+# past ~80 lines it has started duplicating CONTRIBUTING.md (CLAUDE.md sits
+# at 57 as written, so there is room to edit without tripping this).
+@test "the agent guidance files defer to CONTRIBUTING.md" {
+  for f in CLAUDE.md AGENTS.md; do
+    [ -f "$ROOT/$f" ]
+    grep -q 'CONTRIBUTING.md' "$ROOT/$f"
+    [ "$(wc -l < "$ROOT/$f")" -lt 80 ]
+  done
+}
+
+# The one rule an agent gets wrong by default has to be stated where the agent
+# actually reads, not only behind a link.
+@test "CLAUDE.md states the no-AI-co-author rule in full" {
+  grep -q 'Co-Authored-By: Claude' "$ROOT/CLAUDE.md"
+  grep -q 'Claude-Session'         "$ROOT/CLAUDE.md"
+  grep -q 'bats tests/'            "$ROOT/CLAUDE.md"
+}
+
+@test "AGENTS.md points at CLAUDE.md rather than restating it" {
+  grep -q 'CLAUDE.md' "$ROOT/AGENTS.md"
+}
