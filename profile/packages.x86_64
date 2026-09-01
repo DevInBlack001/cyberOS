@@ -95,6 +95,10 @@ nvidia-open-dkms
 broadcom-wl-dkms
 # Several Tier 2 laptop failures are firmware bugs with an LVFS fix.
 fwupd
+# Power profiles (power-saver / balanced / performance) for the battery chip's
+# panel. Quickshell talks to it over D-Bus; without the daemon the panel renders
+# but every profile switch silently does nothing.
+power-profiles-daemon
 # CyberOS has no Microsoft-signed shim and cannot claim Secure Boot support, but
 # sbctl lets a lab enrol its own keys rather than leaving those machines
 # unbootable. docs/SPEC.md S5.

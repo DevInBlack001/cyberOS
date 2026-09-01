@@ -119,3 +119,47 @@ QS="$ROOT/profile/airootfs/etc/skel/.config/quickshell"
     grep -q "\"/usr/local/bin/$w\"\]=\"0:0:755\"" "$ROOT/profile/profiledef.sh"
   done
 }
+
+# --- Battery chip opens power profiles, not the shutdown menu (2026-09-01)
+# The bar already has a dedicated power button for sleep/lock/restart/shutdown;
+# the battery chip was opening the same menu instead of showing what a battery
+# chip should: the active power profile and the live discharge rate.
+
+@test "power profile panel uses the real UPower APIs" {
+  f="$QS/popups/PowerPanel.qml"
+  [ -f "$f" ]
+  grep -q 'Quickshell.Services.UPower' "$f"
+  # profile is writable; assigning it is how a profile is switched.
+  grep -q 'PowerProfiles.profile' "$f"
+  grep -q 'PowerProfile.PowerSaver' "$f"
+  grep -q 'PowerProfile.Balanced' "$f"
+  grep -q 'PowerProfile.Performance' "$f"
+  # Performance is absent on many laptops -- must be gated, not assumed.
+  grep -q 'hasPerformanceProfile' "$f"
+  # changeRate is the discharge/charge figure in watts.
+  grep -q 'changeRate' "$f"
+}
+
+@test "battery chip opens the power profile panel, not the shutdown menu" {
+  grep -q '"powerprofile", "toggle"' "$QS/bar/Battery.qml"
+  run grep 'powerMenu' "$QS/bar/Battery.qml"
+  [ "$status" -ne 0 ]
+  grep -q 'target: "powerprofile"' "$QS/shell.qml"
+  grep -q 'Popups.PowerPanel' "$QS/shell.qml"
+  # the dedicated power button must still own the shutdown menu
+  grep -q 'powerMenu.activeAsync = true' "$QS/bar/Bar.qml"
+}
+
+@test "brightness chip is gone from the bar but the OSD keys still work" {
+  run grep -n 'Brightness {}' "$QS/bar/Bar.qml"
+  [ "$status" -ne 0 ]
+  [ ! -f "$QS/bar/Brightness.qml" ]
+  # XF86 brightness keys route through the shell's OSD handler, not the chip.
+  grep -q 'function brightnessUp' "$QS/shell.qml"
+  grep -q 'function brightnessDown' "$QS/shell.qml"
+}
+
+@test "power-profiles-daemon ships and is enabled on installed systems" {
+  sed 's/#.*//' "$ROOT/profile/packages.x86_64" | tr -d ' ' | grep -qx 'power-profiles-daemon'
+  grep -q 'power-profiles-daemon' "$ROOT/profile/airootfs/usr/local/bin/cyberos-install"
+}
