@@ -44,3 +44,31 @@ QS="$ROOT/profile/airootfs/etc/skel/.config/quickshell"
   grep -q 'Exec=qs ipc call images open %f' "$d"
   grep -q 'MimeType=image/' "$d"
 }
+
+@test "files: FloatingWindow over FolderListModel with the verified roles" {
+  f="$QS/apps/Files.qml"
+  [ -f "$f" ]
+  grep -q 'FloatingWindow' "$f"
+  grep -q 'Qt.labs.folderlistmodel' "$f"
+  grep -q 'showDirsFirst' "$f"
+  run grep 'fileURL' "$f"
+  [ "$status" -ne 0 ]
+}
+
+@test "files: opens via xdg-open, deletes via trash-put, never rm" {
+  f="$QS/apps/Files.qml"
+  grep -q '"xdg-open"' "$f"
+  grep -q '"trash-put"' "$f"
+  grep -q '"7z", "x"' "$f"
+  # A file manager that shells out to rm is a data-loss bug, not a feature.
+  run grep -E '"rm"|rm -' "$f"
+  [ "$status" -ne 0 ]
+}
+
+@test "files: ipc target, desktop entry, and Super+E open it" {
+  grep -q 'target: "files"' "$QS/shell.qml"
+  d="$ROOT/profile/airootfs/usr/local/share/applications/cyberos-files.desktop"
+  [ -f "$d" ]
+  grep -q 'Exec=qs ipc call files open %f' "$d"
+  grep -q 'MimeType=inode/directory' "$d"
+}

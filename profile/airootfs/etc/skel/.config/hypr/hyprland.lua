@@ -19,7 +19,8 @@ hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
 ---------------------------------------------------------------- programs
 local terminal = "foot"
 local browser  = "firefox"
-local files    = "dolphin"
+-- dolphin is gone; Files is a Quickshell surface in the running shell.
+local files    = "qs ipc call files open ''"
 local editor   = "code"
 
 ---------------------------------------------------------------- autostart
