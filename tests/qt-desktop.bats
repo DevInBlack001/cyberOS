@@ -13,14 +13,17 @@ AIROOTFS="$BATS_TEST_DIRNAME/../profile/airootfs"
   [ "$status" -ne 0 ]
 }
 
-@test "mimeapps.list routes documents to the Qt apps" {
+@test "mimeapps.list routes to the QML surfaces and the two kept apps" {
   f="$AIROOTFS/etc/skel/.config/mimeapps.list"
-  grep -qx 'application/pdf=okularApplication_pdf.desktop' "$f"
-  grep -qx 'image/png=org.kde.gwenview.desktop' "$f"
-  grep -qx 'inode/directory=org.kde.dolphin.desktop' "$f"
-  grep -qx 'text/plain=org.kde.kate.desktop' "$f"
-  grep -qx 'application/zip=org.kde.ark.desktop' "$f"
+  grep -qx 'inode/directory=cyberos-files.desktop' "$f"
+  grep -qx 'image/png=cyberos-images.desktop' "$f"
+  grep -qx 'application/pdf=firefox.desktop' "$f"
+  grep -qx 'text/plain=code.desktop' "$f"
   grep -qx 'x-scheme-handler/https=firefox.desktop' "$f"
+  # No KDE app ids may survive here -- those packages are gone, and a
+  # dangling default silently breaks "Open with".
+  run grep -E 'org\.kde\.|okularApplication' "$f"
+  [ "$status" -ne 0 ]
 }
 
 @test "xfce helper and gtk-4.0 configs are gone; gtk-3.0 stays for firefox" {

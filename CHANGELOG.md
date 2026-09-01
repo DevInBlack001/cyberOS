@@ -60,3 +60,10 @@ own build metadata — not SemVer.
   still said "planned"/"open" for branches merged weeks ago, two merged
   branches had no table row at all, and `main.md` flagged an already-fixed
   bug as outstanding.
+- The desktop is Quickshell-only: dolphin, gwenview, okular, kate, kcalc, ark,
+  partitionmanager and pavucontrol-qt are gone, replaced by three native QML
+  surfaces — Files (Super+E), Images, and a Pipewire Mixer on the bar's audio
+  chip. Firefox (which is also the PDF viewer) and VS Code stay; so does the
+  headless xdg-desktop-portal-kde, purely as the file-dialog backend.
+- Added xdg-utils and trash-cli: the QML file manager opens files through
+  xdg-open and deletes through trash-put, never rm.

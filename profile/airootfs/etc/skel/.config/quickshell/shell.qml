@@ -11,6 +11,7 @@ import "launcher" as Launcher
 import "osd" as Osd
 import "notify" as Notify
 import "popups" as Popups
+import "apps" as Apps
 
 ShellRoot {
     id: shell
@@ -72,6 +73,18 @@ ShellRoot {
     LazyLoader {
         id: bt
         Popups.BluetoothPanel { onCloseRequested: bt.active = false }
+    }
+    LazyLoader {
+        id: mixer
+        Popups.Mixer { onCloseRequested: mixer.active = false }
+    }
+    LazyLoader {
+        id: images
+        Apps.Images {}
+    }
+    LazyLoader {
+        id: files
+        Apps.Files {}
     }
     LazyLoader { id: osd; Osd.Osd {} }
 
@@ -177,6 +190,48 @@ ShellRoot {
         target: "bt"
         function toggle(): void {
             bt.activeAsync ? bt.active = false : bt.activeAsync = true
+        }
+    }
+
+    // `qs ipc call mixer toggle` -- replaces pavucontrol-qt.
+    IpcHandler {
+        target: "mixer"
+        function toggle(): void {
+            mixer.activeAsync ? mixer.active = false : mixer.activeAsync = true
+        }
+    }
+
+    // `qs ipc call images open <path>` -- cyberos-images.desktop execs this,
+    // so every mime-opened picture arrives here. Reuses one window: a second
+    // open retargets the existing viewer rather than stacking windows.
+    // `active`, NOT `activeAsync`: async loading returns before the component
+    // exists, so `item` would still be null on the first open and the path
+    // would never be applied. The toggle popups can use activeAsync because
+    // they carry no argument; an open-with-path handler cannot.
+    IpcHandler {
+        target: "images"
+        function open(path: string): void {
+            images.active = true;
+            if (images.item) {
+                images.item.path = path;
+                images.item.visible = true;
+            }
+        }
+    }
+
+    // `qs ipc call files open <path>` -- Super+E and cyberos-files.desktop
+    // both land here. An empty path means "open at $HOME", which is the
+    // component's own default, so it is left alone in that case.
+    // `active`, not `activeAsync` -- see the images handler above: the item
+    // must exist by the time we assign to it.
+    IpcHandler {
+        target: "files"
+        function open(path: string): void {
+            files.active = true;
+            if (files.item) {
+                if (path !== "") files.item.path = path;
+                files.item.visible = true;
+            }
         }
     }
 

@@ -42,7 +42,7 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
 @test "audio: pipewire sink with tracker, click/right-click/scroll behaviours" {
   grep -q 'Pipewire.defaultAudioSink' "$QS/bar/Audio.qml"
   grep -q 'PwObjectTracker' "$QS/bar/Audio.qml"
-  grep -q 'pavucontrol-qt' "$QS/bar/Audio.qml"
+  grep -q '"mixer", "toggle"' "$QS/bar/Audio.qml"
 }
 
 @test "battery: hidden on desktops, warn/critical colours from Theme" {

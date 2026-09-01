@@ -19,7 +19,8 @@ hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
 ---------------------------------------------------------------- programs
 local terminal = "foot"
 local browser  = "firefox"
-local files    = "dolphin"
+-- dolphin is gone; Files is a Quickshell surface in the running shell.
+local files    = "cyberos-files" -- wrapper: always passes an explicit arg, empty here
 local editor   = "code"
 
 ---------------------------------------------------------------- autostart
@@ -160,9 +161,6 @@ hl.bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"),       { locked = tru
 hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
 
 ---------------------------------------------------------------- window rules
-hl.window_rule({ name = "float-utilities",
-  match = { class = "^(pavucontrol-qt|org.kde.kcalc)$" },
-  float = true })
 hl.window_rule({ name = "float-installer", match = { class = "^(cyberos-installer)$" }, float = true, size = { 920, 640 }, center = true })
 hl.window_rule({ name = "float-pip",  match = { title = "^(Picture-in-Picture)$" }, float = true })
 hl.window_rule({ name = "float-vbox", match = { class = "^(VirtualBox Machine)$" }, float = true })
