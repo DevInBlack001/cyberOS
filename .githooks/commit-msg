@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Strip AI attribution trailers from a commit message.
+#
+# CyberOS commits are credited to the person who made them. Claude Code and
+# similar tools append `Co-Authored-By: Claude ...` and `Claude-Session: ...`
+# by default; this removes them so nobody has to remember to. A human
+# co-author is left alone -- only the AI trailers go.
+#
+# Install (see CONTRIBUTING.md):
+#     git config core.hooksPath .githooks
+#
+# This is a convenience, not a gate: nothing in build.sh or tests/ depends on
+# it, and a contributor who has not installed it just has to strip the
+# trailers by hand.
+set -euo pipefail
+
+MSG=$1
+
+awk '
+  tolower($0) ~ /^[[:space:]]*co-authored-by:[[:space:]]*claude/ { next }
+  tolower($0) ~ /^[[:space:]]*claude-session:/                   { next }
+  { lines[++n] = $0 }
+  END {
+    # Removing a trailer block can leave the message ending in blank lines.
+    while (n > 0 && lines[n] ~ /^[[:space:]]*$/) n--
+    for (i = 1; i <= n; i++) print lines[i]
+  }
+' "$MSG" > "$MSG.tmp" && mv "$MSG.tmp" "$MSG"
