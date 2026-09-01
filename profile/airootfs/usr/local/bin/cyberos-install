@@ -276,6 +276,24 @@ BANNER
   printf "${C_GRAY}  ────────────────────────────────────────────────────────────────────────${C_RESET}\n\n"
 }
 
+# The GPT protective MBR's "legacy bootable" flag helps a BIOS machine boot a
+# GPT disk, and is pointless under UEFI. Worse than pointless: some firmware
+# reads a GPT disk flagged this way as a hybrid/legacy disk and refuses it in
+# UEFI-only mode, so the machine reports "no bootable device" even though the
+# ESP, the boot entry and the kernels are all perfectly in place. Reproduced on
+# a Lenovo ThinkPad T480 (2026-09-01): clearing the flag was what finally made
+# the installed system boot. Set it only when we are actually installing in
+# BIOS mode.
+pmbr_boot_wanted() { [[ ${UEFI:-0} -eq 0 ]]; }
+
+# Single place that ever turns the flag on, so the guard cannot be bypassed by
+# a later edit adding another call site.
+apply_pmbr_boot() {
+  local disk=$1
+  pmbr_boot_wanted || return 0
+  parted -s "$disk" disk_set pmbr_boot on 2>/dev/null || true
+}
+
 # Everything below this point touches disks. Stop here when sourced for tests.
 if [[ -n ${CYBEROS_INSTALL_LIB_ONLY:-} ]]; then
   return 0 2>/dev/null || exit 0
@@ -599,12 +617,12 @@ if [[ $MODE == erase ]]; then
   sgdisk -n1:0:+1M   -t1:ef02 -c1:"BIOS boot" \
          -n2:0:+1G   -t2:ef00 -c2:"EFI" \
          -n3:0:0     -t3:8304 -c3:"CyberOS root" "$DISK" >/dev/null
-  parted -s "$DISK" disk_set pmbr_boot on
+  apply_pmbr_boot "$DISK"
   partprobe "$DISK"; udevadm settle; sleep 1
   EFIP=$(part 2); ROOTP=$(part 3); FORMAT_EFI=1; HOMEP=""
 else
   if [[ $(blkid -o value -s PTTYPE "$DISK" 2>/dev/null) == gpt ]]; then
-    parted -s "$DISK" disk_set pmbr_boot on 2>/dev/null || true
+    apply_pmbr_boot "$DISK"
   fi
 fi
 
@@ -807,11 +825,30 @@ sed -i 's/^#\?GRUB_DISABLE_OS_PROBER=.*/GRUB_DISABLE_OS_PROBER=false/' /etc/defa
 
 grub-install --target=i386-pc --recheck "$DISK" || echo "WARNING: BIOS grub-install failed (fine on UEFI-only machines)"
 if mountpoint -q /boot/efi; then
+  # The removable path (\EFI\BOOT\BOOTX64.EFI) is the last-resort fallback some
+  # firmware uses when no NVRAM entry matches.
   grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=CyberOS --removable --no-nvram --recheck
-  [[ $UEFI -eq 1 ]] && grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=CyberOS --recheck || true
+  if [[ $UEFI -eq 1 ]]; then
+    # This writes the firmware boot entry, and it is the step that fails on
+    # real machines (full NVRAM, read-only efivars). It used to end in
+    # `|| true`, so a failure here was invisible: the disk got its EFI
+    # binaries, the firmware got no entry, and the installer still declared
+    # success. A ThinkPad T480 shipped exactly that way on 2026-09-01.
+    grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=CyberOS --recheck \
+      || echo "WARNING: grub-install could not register the UEFI boot entry" >&2
+    # Trust the firmware's own list, not grub-install's exit code -- it can
+    # copy the binaries and still leave no entry behind.
+    if ! efibootmgr 2>/dev/null | grep -qi 'CyberOS'; then
+      : > /var/log/cyberos-no-efi-entry
+    fi
+  fi
 fi
 grub-mkconfig -o /boot/grub/grub.cfg
 CH
+
+# Read the marker before the filesystems go away.
+NO_EFI_ENTRY=0
+[[ -f /mnt/var/log/cyberos-no-efi-entry ]] && NO_EFI_ENTRY=1
 
 msg "Unmounting target filesystems..."
 sync; umount -R /mnt
@@ -829,6 +866,25 @@ printf "  │                                                                  �
 printf "  │  Please remove your installation media before restarting.        │\n"
 printf "  └──────────────────────────────────────────────────────────────────┘\n"
 printf "${C_RESET}\n"
+
+# A machine with no firmware boot entry will land on "no bootable device" at
+# the next power-on. Say so here rather than letting the student find out.
+if [[ $NO_EFI_ENTRY -eq 1 ]]; then
+  printf "${C_RED}${C_BOLD}"
+  printf "  ┌──────────────────────────────────────────────────────────────────┐\n"
+  printf "  │  WARNING: no UEFI boot entry could be created                    │\n"
+  printf "  ├──────────────────────────────────────────────────────────────────┤\n"
+  printf "  │  CyberOS is installed, but this computer's firmware has no entry  │\n"
+  printf "  │  pointing at it, so it may boot to \"no bootable device\".          │\n"
+  printf "  │                                                                  │\n"
+  printf "  │  Fix: boot the CyberOS USB again and run                         │\n"
+  printf "  │       sudo cyberos-repair-boot                                   │\n"
+  printf "  │                                                                  │\n"
+  printf "  │  Or pick the drive manually from the firmware boot menu (F12 on  │\n"
+  printf "  │  ThinkPads) and select CyberOS.                                  │\n"
+  printf "  └──────────────────────────────────────────────────────────────────┘\n"
+  printf "${C_RESET}\n"
+fi
 
 if [[ $YES -eq 0 ]]; then
   read -rp "  Reboot system now? [Y/n]: " reb
