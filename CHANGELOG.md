@@ -10,6 +10,22 @@ own build metadata — not SemVer.
 
 ## [Unreleased]
 
+### Changed
+
+- GTK/GNOME apps removed; Qt6/KDE suite in their place: dolphin (files), ark
+  (archives), okular (PDF), gwenview (images), kate (editor), kcalc,
+  partitionmanager, pavucontrol-qt. Portal FileChooser now served by
+  xdg-desktop-portal-kde.
+- nm-applet, nm-connection-editor and blueman replaced by native Quickshell
+  panels: `qs ipc call wifi toggle` / `qs ipc call bt toggle`, wired to the
+  bar's network and bluetooth chips.
+- Launcher (Super+D) groups apps into category chips: Security, Development,
+  Internet, Office, Graphics, Media, System, Utilities. Tab cycles groups.
+  Metasploit gets a Security launcher entry; Wireshark/Ghidra are re-grouped
+  into Security.
+- cyberos-theme now flips GTK3 settings.ini and the qt6ct palette instead of
+  gsettings; light mode reaches Qt apps for the first time.
+
 ### Security
 
 - Fixed a shell injection in `cyberos-install`'s chroot handoff: an unquoted
