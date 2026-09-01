@@ -37,17 +37,28 @@ PanelWindow {
 
     readonly property var tracked: root.server ? root.server.trackedNotifications.values : []
 
-    // Capacity target: max 20 notifications.
-    // Evicts at most ONE eligible (non-critical) notification per signal invocation
-    // via expire() (capacity timeout reason), avoiding re-entrant mutation loops.
-    // Critical notifications are never auto-evicted; if all >20 items are critical,
-    // the critical invariant takes precedence over the capacity target.
+    readonly property int softLimit: 20
+    readonly property int hardLimit: 100
+
+    // Notification Server Capacity & Defensive Hard Ceiling Policy:
+    // 1. Soft Limit (20): Normal capacity target. Evicts oldest non-critical notification.
+    // 2. Hard Ceiling (100): Resource-safety boundary against pathological floods.
+    //    Evicts oldest notification regardless of urgency to prevent memory exhaustion.
+    //
+    // Signal Re-Entrancy Safety:
+    // Calling expire() mutates trackedNotifications and synchronously re-emits valuesChanged.
+    // Evicting at most ONE item per invocation ensures each signal pass is safe and self-contained;
+    // subsequent evictions (if still over limit) are naturally driven by the re-emitted signal.
     Connections {
         target: root.server ? root.server.trackedNotifications : null
         function onValuesChanged() {
             if (!root.server) return;
             const all = root.server.trackedNotifications.values;
-            if (all.length > 20) {
+            if (all.length > root.hardLimit) {
+                // Hard ceiling exceeded: forcibly evict oldest item (even if critical) for resource safety
+                if (all.length > 0) all[0].expire();
+            } else if (all.length > root.softLimit) {
+                // Soft limit exceeded: evict oldest non-critical item (preserve critical notifications)
                 const candidate = all.find(n => n.urgency !== NotificationUrgency.Critical);
                 if (candidate) candidate.expire();
             }
