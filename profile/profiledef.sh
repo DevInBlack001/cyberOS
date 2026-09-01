@@ -33,4 +33,6 @@ file_permissions=(
   ["/usr/local/bin/cyberos-install-gui"]="0:0:755"
   ["/usr/local/bin/cyberos-firstboot"]="0:0:755"
   ["/usr/local/bin/cyberos-repair-boot"]="0:0:755"
+  ["/usr/local/bin/cyberos-files"]="0:0:755"
+  ["/usr/local/bin/cyberos-images"]="0:0:755"
 )

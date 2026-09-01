@@ -48,7 +48,7 @@ FloatingWindow {
         root.path = dir.get(next, "filePath");
     }
 
-    function fit()  { img.scale = 1; img.x = 0; img.y = 0; }
+    function fit()  { img.scale = 1; pan.x = 0; pan.y = 0; }
     function zoom(factor) { img.scale = Math.max(0.1, Math.min(8, img.scale * factor)); }
 
     Item {
@@ -81,12 +81,21 @@ FloatingWindow {
             sourceSize.width: 4096
             smooth: true
 
+            // Anchors beat x/y in Qt Quick, so an anchored item cannot be
+            // moved by a drag -- pan through a transform instead.
+            transform: Translate { id: pan }
+
             // Drag to pan once zoomed past fit; MouseArea also owns the
             // scroll-to-zoom so the two never fight over the same event.
             MouseArea {
                 anchors.fill: parent
-                drag.target: img
                 acceptedButtons: Qt.LeftButton
+                property real originX: 0
+                property real originY: 0
+                onPressed: mouse => { originX = mouse.x - pan.x; originY = mouse.y - pan.y; }
+                onPositionChanged: mouse => {
+                    if (pressed) { pan.x = mouse.x - originX; pan.y = mouse.y - originY; }
+                }
                 onWheel: wheel => root.zoom(wheel.angleDelta.y > 0 ? 1.15 : 0.87)
                 onDoubleClicked: root.fit()
             }

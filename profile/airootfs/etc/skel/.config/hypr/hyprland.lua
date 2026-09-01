@@ -20,7 +20,7 @@ hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
 local terminal = "foot"
 local browser  = "firefox"
 -- dolphin is gone; Files is a Quickshell surface in the running shell.
-local files    = "qs ipc call files open ''"
+local files    = "cyberos-files" -- wrapper: always passes an explicit arg, empty here
 local editor   = "code"
 
 ---------------------------------------------------------------- autostart

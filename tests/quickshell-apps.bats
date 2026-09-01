@@ -36,12 +36,21 @@ QS="$ROOT/profile/airootfs/etc/skel/.config/quickshell"
   [ "$status" -ne 0 ]
 }
 
+@test "images: pans via a transform, not by moving an anchored item" {
+  f="$QS/apps/Images.qml"
+  grep -q 'Translate' "$f"
+  grep -q 'pan.x' "$f"
+  # anchors beat x/y, so a drag target on the anchored image is dead code
+  run grep 'drag.target' "$f"
+  [ "$status" -ne 0 ]
+}
+
 @test "images: ipc open target and desktop entry at an unowned path" {
   grep -q 'target: "images"' "$QS/shell.qml"
   grep -q 'function open' "$QS/shell.qml"
   d="$ROOT/profile/airootfs/usr/local/share/applications/cyberos-images.desktop"
   [ -f "$d" ]
-  grep -q 'Exec=qs ipc call images open %f' "$d"
+  grep -q 'Exec=cyberos-images %f' "$d"
   grep -q 'MimeType=image/' "$d"
 }
 
@@ -69,6 +78,19 @@ QS="$ROOT/profile/airootfs/etc/skel/.config/quickshell"
   grep -q 'target: "files"' "$QS/shell.qml"
   d="$ROOT/profile/airootfs/usr/local/share/applications/cyberos-files.desktop"
   [ -f "$d" ]
-  grep -q 'Exec=qs ipc call files open %f' "$d"
+  grep -q 'Exec=cyberos-files %f' "$d"
   grep -q 'MimeType=inode/directory' "$d"
+}
+
+@test "launcher wrappers pass an explicit argument and are mode-registered" {
+  for w in cyberos-files cyberos-images; do
+    f="$ROOT/profile/airootfs/usr/local/bin/$w"
+    [ -f "$f" ]
+    # The empty-default is the whole point: qs ipc call with too few
+    # arguments silently does nothing.
+    grep -q '"${1:-}"' "$f"
+    # mkarchiso copies airootfs with --no-preserve=mode, so the execute bit
+    # only exists if profiledef.sh declares it.
+    grep -q "\"/usr/local/bin/$w\"\]=\"0:0:755\"" "$ROOT/profile/profiledef.sh"
+  done
 }

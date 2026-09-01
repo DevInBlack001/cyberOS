@@ -2,7 +2,7 @@
 Type=Application
 Name=Images
 Comment=View pictures
-Exec=qs ipc call images open %f
+Exec=cyberos-images %f
 Icon=image-x-generic
 Terminal=false
 Categories=Graphics;Viewer;

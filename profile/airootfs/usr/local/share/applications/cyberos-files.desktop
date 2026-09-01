@@ -2,7 +2,7 @@
 Type=Application
 Name=Files
 Comment=Browse your files
-Exec=qs ipc call files open %f
+Exec=cyberos-files %f
 Icon=system-file-manager
 Terminal=false
 Categories=System;FileManager;
