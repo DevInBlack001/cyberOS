@@ -111,6 +111,8 @@ xdg-desktop-portal-hyprland
 # Replaces xdg-desktop-portal-gtk; /etc/xdg-desktop-portal/hyprland-portals.conf
 # routes FileChooser here.
 xdg-desktop-portal-kde
+# removable-drive mounting for the QML file manager
+udisks2
 xdg-user-dirs
 quickshell
 grim
@@ -141,7 +143,6 @@ pipewire-alsa
 pipewire-pulse
 pipewire-jack
 wireplumber
-pavucontrol-qt
 bluez
 bluez-utils
 
@@ -158,23 +159,17 @@ lazygit
 
 # ---- apps ----
 firefox
-# Qt6/KDE app suite -- GTK apps (thunar, file-roller, gnome-*) are gone.
-dolphin
-ark
-# kio-extras: MTP/SMB/etc URLs in dolphin; kio-fuse: lets non-KDE apps open
-# kio URLs; udisks2: removable-drive mounting via Solid.
-kio-extras
-kio-fuse
-udisks2
-# video + document thumbnails in dolphin
-ffmpegthumbs
-kdegraphics-thumbnailers
-gwenview
+# Firefox is also the PDF viewer (pdf.js) -- okular is gone with the rest of
+# the KDE apps. Files/Images/Mixer are Quickshell QML surfaces now, so the
+# only GUI apps on the ISO are the two that no QML surface can replace.
 mpv
-okular
-kcalc
-kate
-partitionmanager
+# xdg-open: how the QML file manager hands a file to its registered handler.
+# Shell scripts, no toolkit dependency. Nothing else on the ISO provides it
+# (dolphin used KIO internally).
+xdg-utils
+# trash-put: the freedesktop trash spec. `gio trash` left with gvfs, and the
+# file manager must never rm a student's work.
+trash-cli
 
 # ---- virtualization ----
 virtualbox
@@ -193,7 +188,6 @@ ttf-liberation
 ttf-dejavu
 papirus-icon-theme
 adwaita-cursors
-breeze-icons
 kvantum
 qt5ct
 qt6ct

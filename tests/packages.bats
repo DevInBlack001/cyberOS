@@ -22,10 +22,24 @@ pkg_listed() {
 }
 
 @test "Qt6/KDE replacements are present in packages.x86_64" {
-  for p in dolphin ark kio-extras kio-fuse ffmpegthumbs \
-           kdegraphics-thumbnailers udisks2 pavucontrol-qt kcalc kate okular \
-           gwenview partitionmanager xdg-desktop-portal-kde breeze-icons \
-           adwaita-cursors; do
+  for p in udisks2 xdg-desktop-portal-kde adwaita-cursors; do
+    pkg_listed "$p"
+  done
+}
+
+@test "KDE applications are gone from packages.x86_64" {
+  for p in dolphin ark okular gwenview kate kcalc partitionmanager \
+           pavucontrol-qt kio-extras kio-fuse ffmpegthumbs \
+           kdegraphics-thumbnailers breeze-icons; do
+    run pkg_listed "$p"
+    [ "$status" -ne 0 ]
+  done
+}
+
+@test "headless Qt services and CLI tooling the QML surfaces need are present" {
+  # portal-kde is the FileChooser backend for firefox/code (no window, no
+  # KDE app); udisks2 mounts removable media; both are daemons, not apps.
+  for p in xdg-desktop-portal-kde udisks2 xdg-utils trash-cli 7zip unzip; do
     pkg_listed "$p"
   done
 }
