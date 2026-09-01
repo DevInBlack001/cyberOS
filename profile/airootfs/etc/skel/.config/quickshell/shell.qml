@@ -69,6 +69,10 @@ ShellRoot {
         id: wifi
         Popups.WifiPanel { onCloseRequested: wifi.active = false }
     }
+    LazyLoader {
+        id: bt
+        Popups.BluetoothPanel { onCloseRequested: bt.active = false }
+    }
     LazyLoader { id: osd; Osd.Osd {} }
 
     // Replaces mako. actionsSupported/imageSupported/bodySupported tell the
@@ -165,6 +169,14 @@ ShellRoot {
         target: "wifi"
         function toggle(): void {
             wifi.activeAsync ? wifi.active = false : wifi.activeAsync = true
+        }
+    }
+
+    // `qs ipc call bt toggle` -- replaces blueman-manager/blueman-applet.
+    IpcHandler {
+        target: "bt"
+        function toggle(): void {
+            bt.activeAsync ? bt.active = false : bt.activeAsync = true
         }
     }
 

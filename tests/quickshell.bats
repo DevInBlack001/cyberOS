@@ -214,3 +214,13 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   run grep 'nm-connection-editor' "$QS/bar/Network.qml"
   [ "$status" -ne 0 ]
 }
+
+@test "bluetooth panel replaces blueman: surface, ipc target, chip click" {
+  [ -f "$QS/popups/BluetoothPanel.qml" ]
+  grep -q 'Quickshell.Bluetooth' "$QS/popups/BluetoothPanel.qml"
+  grep -q 'pair()' "$QS/popups/BluetoothPanel.qml"
+  grep -q 'target: "bt"' "$QS/shell.qml"
+  grep -q '"bt", "toggle"' "$QS/bar/BluetoothChip.qml"
+  run grep 'blueman' "$QS/bar/BluetoothChip.qml"
+  [ "$status" -ne 0 ]
+}
