@@ -20,6 +20,12 @@ QS="$ROOT/profile/airootfs/etc/skel/.config/quickshell"
   grep -q 'objects: Pipewire.nodes.values' "$f"
   run grep -E 'objects: root\.(sinks|streams)' "$f"
   [ "$status" -ne 0 ]
+  # PwNodeAudio.volume's NOTIFY signal is volumesChanged (shared with the
+  # volumes list) -- there is no volumeChanged, and a Connections handler
+  # for a nonexistent signal is dead code that only warns at runtime.
+  grep -q 'onVolumesChanged' "$f"
+  run grep 'function onVolumeChanged' "$f"
+  [ "$status" -ne 0 ]
 }
 
 @test "mixer: wired into the shell and owns the bar's audio chip" {

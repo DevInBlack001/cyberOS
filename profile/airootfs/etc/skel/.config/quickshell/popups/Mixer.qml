@@ -74,10 +74,12 @@ PanelWindow {
             // external change (bar scroll chip, XF86 keys, another app) would
             // stop moving the slider for the rest of this panel's life.
             // Re-assert it whenever the node's own volume changes and the
-            // user is not currently dragging.
+            // user is not currently dragging. PwNodeAudio's `volume`
+            // property shares its NOTIFY signal with `volumes`
+            // (volumesChanged) -- there is no volumeChanged.
             Connections {
                 target: row.node?.audio ?? null
-                function onVolumeChanged() {
+                function onVolumesChanged() {
                     if (!slider.pressed) slider.value = row.node.audio.volume;
                 }
             }
