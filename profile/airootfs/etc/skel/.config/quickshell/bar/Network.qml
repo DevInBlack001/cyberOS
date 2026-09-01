@@ -28,5 +28,5 @@ BarModule {
         : activeWifiNetwork ? activeWifiNetwork.name + " (" + Math.round(activeWifiNetwork.signalStrength) + "%)"
         : "Disconnected"
 
-    onClicked: Quickshell.execDetached(["nm-connection-editor"])
+    onClicked: Quickshell.execDetached(["qs", "ipc", "call", "wifi", "toggle"])
 }

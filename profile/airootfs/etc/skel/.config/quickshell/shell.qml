@@ -65,6 +65,10 @@ ShellRoot {
         id: clip
         Popups.ClipHist { onCloseRequested: clip.active = false }
     }
+    LazyLoader {
+        id: wifi
+        Popups.WifiPanel { onCloseRequested: wifi.active = false }
+    }
     LazyLoader { id: osd; Osd.Osd {} }
 
     // Replaces mako. actionsSupported/imageSupported/bodySupported tell the
@@ -153,6 +157,14 @@ ShellRoot {
         target: "clip"
         function toggle(): void {
             clip.activeAsync ? clip.active = false : clip.activeAsync = true
+        }
+    }
+
+    // `qs ipc call wifi toggle` -- replaces nm-applet/nm-connection-editor.
+    IpcHandler {
+        target: "wifi"
+        function toggle(): void {
+            wifi.activeAsync ? wifi.active = false : wifi.activeAsync = true
         }
     }
 

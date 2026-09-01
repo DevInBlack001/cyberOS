@@ -209,3 +209,14 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   grep -q 'textFormat: Text.PlainText' "$QS/bar/WindowTitle.qml"
   awk '/text: chip\.label/,/^ *}/' "$QS/bar/BarModule.qml" | grep -q 'textFormat: Text.PlainText'
 }
+
+@test "wifi panel replaces nm-applet: surface, ipc target, chip click" {
+  [ -f "$QS/popups/WifiPanel.qml" ]
+  grep -q 'Quickshell.Networking' "$QS/popups/WifiPanel.qml"
+  grep -q 'connectWithPsk' "$QS/popups/WifiPanel.qml"
+  grep -q 'scannerEnabled' "$QS/popups/WifiPanel.qml"
+  grep -q 'target: "wifi"' "$QS/shell.qml"
+  grep -q 'qs ipc call wifi toggle\|"wifi", "toggle"' "$QS/bar/Network.qml"
+  run grep 'nm-connection-editor' "$QS/bar/Network.qml"
+  [ "$status" -ne 0 ]
+}
