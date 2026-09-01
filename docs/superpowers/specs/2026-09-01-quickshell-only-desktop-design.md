@@ -16,7 +16,17 @@ Three things survive that a naive reading of "no GTK, no KDE" would delete. Each
 |---|---|
 | **Firefox** | No QML surface can replace a browser. It bundles its own GTK internally; that is Mozilla's build, not a system GTK app. It also *replaces Okular* — `pdf.js` is the ISO's PDF viewer. |
 | **VS Code** | Same reasoning (Electron). Students need a real editor; neovim is on the ISO as the terminal alternative. |
-| **`xdg-desktop-portal-kde`** | A headless D-Bus service, not a KDE app: no window, no menu entry, no KDE Gear dependency chain. It is the ISO's only FileChooser backend — without it Firefox and VS Code lose native Open/Save dialogs, because `xdg-desktop-portal-hyprland` implements no FileChooser. |
+| **`xdg-desktop-portal-kde`** | A headless D-Bus service, not a KDE app: no window, no menu entry. It is the ISO's only FileChooser backend — without it Firefox and VS Code lose native Open/Save dialogs, because `xdg-desktop-portal-hyprland` implements no FileChooser. **⚠️ Correction (verified in the VM, 2026-09-01):** an earlier draft of this row claimed "no KDE Gear dependency chain". That was **wrong**. `xdg-desktop-portal-kde` depends on `plasma-workspace` (55.56 MiB) and the KDE Frameworks stack — `kio`, `kio-fuse`, `kiconthemes`, `kirigami`, `kdeclarative`, `knotifications`, `kwayland`, `kwindowsystem`, `kglobalaccel`, `kstatusnotifieritem`, `kitemviews`, `kcrash`, `kservice`. This is why `kio-extras` and `breeze-icons` remain installed even though both were dropped from the explicit package list. Keeping this portal therefore keeps a large part of KDE on the ISO, which is in tension with the "no KDE" goal; the alternatives are documented in §2.1. |
+
+### 2.1 Open decision: the FileChooser portal
+
+The choice to keep `xdg-desktop-portal-kde` was made on the incorrect premise corrected above. The real options are:
+
+1. **Keep it** — native Qt file dialogs for Firefox/VS Code, at the cost of `plasma-workspace` + KDE Frameworks on the ISO.
+2. **Drop it** — no FileChooser portal at all. Firefox and VS Code fall back to their own built-in file dialogs (both ship one), so file open/save still works; it just isn't a native Qt dialog and won't match the desktop's look. Removes the entire KDE dependency chain, fully satisfying "no KDE".
+3. **Swap for `xdg-desktop-portal-gtk`** — a GTK file dialog, pulling GTK3 (already present for Firefox) instead of KDE Frameworks. Smaller net addition than option 1, but contradicts "no GTK".
+
+This is a user decision and has not been made unilaterally. The branch currently implements option 1.
 
 `gtk3` also remains on the ISO as a transitive dependency of Firefox. That is a library, not an app. **The test for "is this allowed" is: does it put a window, launcher entry, or tray icon in front of the student?** Firefox and VS Code do, and are justified above. Nothing else GTK/KDE/GNOME may.
 
