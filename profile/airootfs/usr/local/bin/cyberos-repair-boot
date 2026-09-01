@@ -11,11 +11,36 @@ DISK=$(lsblk -pno PKNAME "$ROOTP" | head -1)
 mount "$ROOTP" /mnt
 if [[ $(blkid -o value -s TYPE "$ROOTP") == btrfs ]]; then umount /mnt; mount -o subvol=@ "$ROOTP" /mnt; fi
 [[ -n $EFIP ]] && { mkdir -p /mnt/boot/efi; mount "$EFIP" /mnt/boot/efi; }
-[[ $(blkid -o value -s PTTYPE "$DISK") == gpt ]] && parted -s "$DISK" disk_set pmbr_boot on || true
+# The GPT protective-MBR "legacy bootable" flag is what a BIOS machine needs and
+# what some UEFI firmware refuses: a Lenovo ThinkPad T480 skipped the disk
+# entirely while it was set, reporting "no bootable device" despite a valid ESP,
+# boot entry and kernel. So drive it to the right value for this firmware rather
+# than only ever turning it on -- that is what lets this script rescue a machine
+# an earlier CyberOS installer left unbootable.
+if [[ $(blkid -o value -s PTTYPE "$DISK") == gpt ]]; then
+  if [[ -d /sys/firmware/efi/efivars ]]; then
+    parted -s "$DISK" disk_set pmbr_boot off 2>/dev/null || true
+  else
+    parted -s "$DISK" disk_set pmbr_boot on 2>/dev/null || true
+  fi
+fi
 arch-chroot /mnt grub-install --target=i386-pc --recheck "$DISK" || echo "BIOS grub-install failed (ok on UEFI-only)"
 if [[ -n $EFIP ]]; then
   arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=CyberOS --removable --no-nvram --recheck
-  [[ -d /sys/firmware/efi/efivars ]] && arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=CyberOS --recheck || true
+  if [[ -d /sys/firmware/efi/efivars ]]; then
+    arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=CyberOS --recheck \
+      || echo "WARNING: grub-install could not register the UEFI boot entry" >&2
+    # grub-install can copy the binaries and still leave no entry behind, so
+    # ask the firmware, and write the entry ourselves if it is missing. Short
+    # flags on purpose: some efibootmgr builds ignore --loader.
+    if ! efibootmgr 2>/dev/null | grep -qi 'CyberOS'; then
+      ESP_NUM=$(lsblk -pnro NAME,PARTN 2>/dev/null | awk -v e="$EFIP" '$1==e{print $2; exit}')
+      [[ -n $ESP_NUM ]] || ESP_NUM=$(echo "$EFIP" | grep -oE '[0-9]+$')
+      echo "No CyberOS boot entry found; creating one on $DISK part $ESP_NUM"
+      efibootmgr -c -d "$DISK" -p "$ESP_NUM" -L CyberOS -l '\EFI\CyberOS\grubx64.efi' \
+        || echo "WARNING: could not create a boot entry; use the firmware boot menu (F12)" >&2
+    fi
+  fi
 fi
 arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 umount -R /mnt

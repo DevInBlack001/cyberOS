@@ -115,3 +115,45 @@ setup() {
     [[ "$output" == *"$var"* ]]
   done
 }
+
+# --- Regression: ThinkPad T480 would not boot after a UEFI install (2026-09-01)
+# Two independent defects, both found on real hardware:
+#   1. the GPT protective-MBR "legacy bootable" flag was set on every install;
+#      Lenovo firmware treats such a disk as hybrid and skips it in UEFI mode.
+#   2. grub-install's NVRAM step could fail while `|| true` hid it, so the
+#      machine had EFI binaries but no boot entry -- and the installer still
+#      printed "INSTALLATION COMPLETE!".
+
+@test "pmbr_boot is wanted for BIOS installs and refused on UEFI" {
+  UEFI=0; run pmbr_boot_wanted; [ "$status" -eq 0 ]
+  UEFI=1; run pmbr_boot_wanted; [ "$status" -ne 0 ]
+}
+
+@test "installer enables pmbr_boot from exactly one guarded place" {
+  f="$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-install"
+  # Exactly one `pmbr_boot on` in the whole script, and it lives inside
+  # apply_pmbr_boot, which refuses unless pmbr_boot_wanted says BIOS. A second
+  # call site added later would trip this.
+  [ "$(grep -c 'pmbr_boot on' "$f")" -eq 1 ]
+  grep -A3 '^apply_pmbr_boot()' "$f" | grep -q 'pmbr_boot_wanted || return 0'
+  grep -A4 '^apply_pmbr_boot()' "$f" | grep -q 'pmbr_boot on'
+}
+
+@test "installer does not swallow the UEFI boot-entry failure" {
+  run grep -n 'bootloader-id=CyberOS --recheck || true' \
+    "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-install"
+  [ "$status" -ne 0 ]
+}
+
+@test "installer verifies a UEFI boot entry exists before claiming success" {
+  f="$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-install"
+  grep -q 'efibootmgr' "$f"
+  grep -q 'cyberos-no-efi-entry' "$f"
+}
+
+@test "repair-boot clears pmbr_boot on UEFI and can fix an unbootable disk" {
+  f="$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-repair-boot"
+  grep -q 'pmbr_boot off' "$f"
+  run grep -n 'bootloader-id=CyberOS --recheck || true' "$f"
+  [ "$status" -ne 0 ]
+}
