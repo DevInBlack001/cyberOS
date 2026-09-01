@@ -73,6 +73,10 @@ ShellRoot {
         id: bt
         Popups.BluetoothPanel { onCloseRequested: bt.active = false }
     }
+    LazyLoader {
+        id: mixer
+        Popups.Mixer { onCloseRequested: mixer.active = false }
+    }
     LazyLoader { id: osd; Osd.Osd {} }
 
     // Replaces mako. actionsSupported/imageSupported/bodySupported tell the
@@ -177,6 +181,14 @@ ShellRoot {
         target: "bt"
         function toggle(): void {
             bt.activeAsync ? bt.active = false : bt.activeAsync = true
+        }
+    }
+
+    // `qs ipc call mixer toggle` -- replaces pavucontrol-qt.
+    IpcHandler {
+        target: "mixer"
+        function toggle(): void {
+            mixer.activeAsync ? mixer.active = false : mixer.activeAsync = true
         }
     }
 

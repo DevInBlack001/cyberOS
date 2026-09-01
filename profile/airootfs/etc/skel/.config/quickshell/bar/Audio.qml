@@ -18,7 +18,7 @@ BarModule {
 
     onClicked: button => {
         if (button === Qt.RightButton) { if (sink) sink.audio.muted = !muted }
-        else Quickshell.execDetached(["pavucontrol-qt"])
+        else Quickshell.execDetached(["qs", "ipc", "call", "mixer", "toggle"])
     }
     onScrolled: delta => {
         if (sink) sink.audio.volume = Math.max(0, Math.min(1, vol + delta * 0.05))
