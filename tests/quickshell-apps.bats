@@ -36,13 +36,26 @@ QS="$ROOT/profile/airootfs/etc/skel/.config/quickshell"
   [ "$status" -ne 0 ]
 }
 
-@test "images: pans via a transform, not by moving an anchored item" {
+@test "images: pans via a transform, with the MouseArea outside it" {
   f="$QS/apps/Images.qml"
   grep -q 'Translate' "$f"
   grep -q 'pan.x' "$f"
   # anchors beat x/y, so a drag target on the anchored image is dead code
   run grep 'drag.target' "$f"
   [ "$status" -ne 0 ]
+  # The MouseArea must NOT be nested inside the Image that carries the
+  # Translate: Qt would deliver it already-transformed coordinates and the
+  # pan math would double-compensate. Assert the Image element contains no
+  # MouseArea by checking the span from `Image {` to the line before the
+  # MouseArea declaration never opens one.
+  img_line=$(grep -n 'Image {' "$f" | head -1 | cut -d: -f1)
+  ma_line=$(grep -n 'MouseArea {' "$f" | head -1 | cut -d: -f1)
+  [ "$ma_line" -gt "$img_line" ]
+  # the Image block must have closed before the MouseArea opens: at the
+  # MouseArea's indentation, a nested one would be deeper than the Image's.
+  img_indent=$(sed -n "${img_line}p" "$f" | sed 's/[^ ].*//' | wc -c)
+  ma_indent=$(sed -n "${ma_line}p" "$f" | sed 's/[^ ].*//' | wc -c)
+  [ "$ma_indent" -le "$img_indent" ]
 }
 
 @test "images: ipc open target and desktop entry at an unowned path" {

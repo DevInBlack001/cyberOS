@@ -84,21 +84,23 @@ FloatingWindow {
             // Anchors beat x/y in Qt Quick, so an anchored item cannot be
             // moved by a drag -- pan through a transform instead.
             transform: Translate { id: pan }
+        }
 
-            // Drag to pan once zoomed past fit; MouseArea also owns the
-            // scroll-to-zoom so the two never fight over the same event.
-            MouseArea {
-                anchors.fill: parent
-                acceptedButtons: Qt.LeftButton
-                property real originX: 0
-                property real originY: 0
-                onPressed: mouse => { originX = mouse.x - pan.x; originY = mouse.y - pan.y; }
-                onPositionChanged: mouse => {
-                    if (pressed) { pan.x = mouse.x - originX; pan.y = mouse.y - originY; }
-                }
-                onWheel: wheel => root.zoom(wheel.angleDelta.y > 0 ? 1.15 : 0.87)
-                onDoubleClicked: root.fit()
+        // Deliberately a sibling of the Image, not a child: a MouseArea
+        // inside the transformed subtree receives coordinates that Qt has
+        // already adjusted by `pan`, so subtracting pan again in onPressed
+        // double-compensates and the drag oscillates instead of tracking.
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton
+            property real originX: 0
+            property real originY: 0
+            onPressed: mouse => { originX = mouse.x - pan.x; originY = mouse.y - pan.y; }
+            onPositionChanged: mouse => {
+                if (pressed) { pan.x = mouse.x - originX; pan.y = mouse.y - originY; }
             }
+            onWheel: wheel => root.zoom(wheel.angleDelta.y > 0 ? 1.15 : 0.87)
+            onDoubleClicked: root.fit()
         }
 
         Text {
