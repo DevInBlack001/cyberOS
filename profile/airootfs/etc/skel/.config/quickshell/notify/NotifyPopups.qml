@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Services.Notifications
 import ".." as Cyber
 
 // Replaces mako's own popup rendering. Instantiated once from shell.qml via
@@ -36,18 +37,19 @@ PanelWindow {
 
     readonly property var tracked: root.server ? root.server.trackedNotifications.values : []
 
-    // Trim at the server level so excess notifications are dismissed/dismissed from root.server
-    // rather than stranded in the uncapped server list without a delegate or timer.
+    // Capacity target: max 20 notifications.
+    // Evicts at most ONE eligible (non-critical) notification per signal invocation
+    // via expire() (capacity timeout reason), avoiding re-entrant mutation loops.
+    // Critical notifications are never auto-evicted; if all >20 items are critical,
+    // the critical invariant takes precedence over the capacity target.
     Connections {
         target: root.server ? root.server.trackedNotifications : null
         function onValuesChanged() {
             if (!root.server) return;
             const all = root.server.trackedNotifications.values;
             if (all.length > 20) {
-                const overflow = all.length - 20;
-                for (let i = 0; i < overflow; i++) {
-                    all[i].dismiss();
-                }
+                const candidate = all.find(n => n.urgency !== NotificationUrgency.Critical);
+                if (candidate) candidate.expire();
             }
         }
     }

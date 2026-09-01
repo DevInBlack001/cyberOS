@@ -118,6 +118,7 @@ PanelWindow {
                             anchors.rightMargin: 12
                             verticalAlignment: Text.AlignVCenter
                             elide: Text.ElideRight
+                            textFormat: Text.PlainText
                             color: Cyber.Theme.fg
                             font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize }
                             text: `${row.modelData?.title ?? ""} \u2014 ${row.appClass} (ws ${row.wsId})`
