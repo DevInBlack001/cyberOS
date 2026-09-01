@@ -73,3 +73,31 @@ HOOK="$ROOT/.githooks/commit-msg"
   "$HOOK" "$msg"
   [ "$(cat "$msg")" = "$before" ]
 }
+
+@test "CONTRIBUTING.md is the canonical guide and covers the four areas" {
+  doc="$ROOT/CONTRIBUTING.md"
+  [ -f "$doc" ]
+  grep -q '^## Branching'            "$doc"
+  grep -q '^## Before you start'     "$doc"
+  grep -q '^## Testing'              "$doc"
+  grep -q '^## Commits'              "$doc"
+  grep -q '^### No AI co-authorship' "$doc"
+}
+
+# The test command was practised but written down nowhere before this.
+@test "CONTRIBUTING.md documents the real test and build commands" {
+  grep -q 'bats tests/'  "$ROOT/CONTRIBUTING.md"
+  grep -q './build.sh'   "$ROOT/CONTRIBUTING.md"
+  grep -q './test-vm.sh' "$ROOT/CONTRIBUTING.md"
+}
+
+@test "CONTRIBUTING.md documents installing the hook" {
+  grep -q 'core.hooksPath .githooks' "$ROOT/CONTRIBUTING.md"
+}
+
+# One source of truth: the README must point at CONTRIBUTING.md rather than
+# keeping its own copy of the branch table that can drift out of step.
+@test "README delegates contributing to CONTRIBUTING.md and keeps no rival copy" {
+  grep -q 'CONTRIBUTING.md' "$ROOT/README.md"
+  ! grep -q '^| `installer/` |' "$ROOT/README.md"
+}
