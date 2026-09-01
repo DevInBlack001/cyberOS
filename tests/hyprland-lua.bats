@@ -88,16 +88,23 @@ run_config() { lua -e "dofile('$STUB'); dofile('$HYPR/hyprland.lua'); report()";
   [[ "$output" == *"layer_rule ns=quickshell"* ]]
 }
 
-@test "autostart execs qs exactly once; swaybg/nm-applet/blueman-applet/cliphist survive" {
+@test "autostart execs qs exactly once; swaybg/cliphist survive; GTK applets gone" {
   run run_config
   [ "$status" -eq 0 ]
   n=$(grep -c '^exec qs$' <<<"$output")
   [ "$n" -eq 1 ]
   [[ "$output" == *"exec swaybg"* ]]
-  [[ "$output" == *"exec nm-applet"* ]]
-  [[ "$output" == *"exec blueman-applet"* ]]
+  [[ "$output" != *"nm-applet"* ]]
+  [[ "$output" != *"blueman-applet"* ]]
   [[ "$output" == *"exec wl-paste --type text --watch cliphist store"* ]]
   [[ "$output" == *"exec wl-paste --type image --watch cliphist store"* ]]
+}
+
+@test "app binds target the Qt apps; installer launches without gtk-launch" {
+  run run_config
+  [[ "$output" == *"bindcmd SUPER + E :: dolphin"* ]]
+  [[ "$output" == *'bindcmd SUPER + I :: foot --app-id=cyberos-installer --title="Install CyberOS" sudo /usr/local/bin/cyberos-install'* ]]
+  [[ "$output" != *"gtk-launch"* ]]
 }
 
 @test "Super+D opens the quickshell launcher" {

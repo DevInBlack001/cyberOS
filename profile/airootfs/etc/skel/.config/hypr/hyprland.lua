@@ -19,7 +19,7 @@ hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
 ---------------------------------------------------------------- programs
 local terminal = "foot"
 local browser  = "firefox"
-local files    = "thunar"
+local files    = "dolphin"
 local editor   = "code"
 
 ---------------------------------------------------------------- autostart
@@ -28,8 +28,6 @@ hl.on("hyprland.start", function()
   hl.exec_cmd("qs")
   hl.exec_cmd("hypridle")
   hl.exec_cmd("systemctl --user start hyprpolkitagent")
-  hl.exec_cmd("nm-applet --indicator")
-  hl.exec_cmd("blueman-applet")
   hl.exec_cmd("wl-paste --type text --watch cliphist store")
   hl.exec_cmd("wl-paste --type image --watch cliphist store")
 end)
@@ -107,7 +105,8 @@ local mod = "SUPER"
 
 hl.bind(mod .. " + Return", hl.dsp.exec_cmd(terminal))
 hl.bind(mod .. " + D",      hl.dsp.exec_cmd("qs ipc call launcher toggle"))
-hl.bind(mod .. " + I",      hl.dsp.exec_cmd("gtk-launch cyberos-install"))
+-- the GTK launch helper is gone with GTK; exec the installer .desktop's command directly.
+hl.bind(mod .. " + I",      hl.dsp.exec_cmd('foot --app-id=cyberos-installer --title="Install CyberOS" sudo /usr/local/bin/cyberos-install'))
 hl.bind(mod .. " + Tab",    hl.dsp.exec_cmd("qs ipc call winswitch toggle"))
 hl.bind(mod .. " + period", hl.dsp.exec_cmd("qs ipc call emoji toggle"))
 hl.bind(mod .. " + equal",  hl.dsp.exec_cmd("qs ipc call calc toggle"))
@@ -162,7 +161,7 @@ hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"),   { locked = tru
 
 ---------------------------------------------------------------- window rules
 hl.window_rule({ name = "float-utilities",
-  match = { class = "^(pavucontrol|blueman-manager|nm-connection-editor|org.gnome.Calculator)$" },
+  match = { class = "^(pavucontrol-qt|org.kde.kcalc)$" },
   float = true })
 hl.window_rule({ name = "float-installer", match = { class = "^(cyberos-installer)$" }, float = true, size = { 920, 640 }, center = true })
 hl.window_rule({ name = "float-pip",  match = { title = "^(Picture-in-Picture)$" }, float = true })
