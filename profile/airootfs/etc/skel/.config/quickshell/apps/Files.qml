@@ -43,9 +43,14 @@ FloatingWindow {
 
     function enter(dirPath) { root.path = dirPath; }
 
+    // Plain string slicing rather than dir.parentFolder: parentFolder is a
+    // url whose toString() percent-encodes reserved characters, so a folder
+    // named "My Documents" would come back as "My%20Documents" and the next
+    // folder binding would fail to resolve. root.path is never encoded.
     function goUp() {
-        const p = dir.parentFolder.toString().replace("file://", "");
-        if (p !== "") root.path = p;
+        if (root.path === "/") return;
+        const cut = root.path.lastIndexOf("/");
+        root.path = cut <= 0 ? "/" : root.path.substring(0, cut);
     }
 
     // Everything below is argv, never a shell string -- a filename with a
@@ -235,7 +240,10 @@ FloatingWindow {
                             }
                             MenuItem {
                                 text: "Extract here"
-                                enabled: cell.isArchive
+                                // Also gated on the shared extractProc being
+                                // idle: one Process serves every delegate, so
+                                // re-exec while it runs has no defined result.
+                                enabled: cell.isArchive && !extractProc.running
                                 onTriggered: root.extract(cell.filePath)
                             }
                             MenuItem { text: "Copy path"; onTriggered: root.copyPath(cell.filePath) }
