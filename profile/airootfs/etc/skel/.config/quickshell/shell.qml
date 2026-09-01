@@ -11,6 +11,7 @@ import "launcher" as Launcher
 import "osd" as Osd
 import "notify" as Notify
 import "popups" as Popups
+import "apps" as Apps
 
 ShellRoot {
     id: shell
@@ -76,6 +77,10 @@ ShellRoot {
     LazyLoader {
         id: mixer
         Popups.Mixer { onCloseRequested: mixer.active = false }
+    }
+    LazyLoader {
+        id: images
+        Apps.Images {}
     }
     LazyLoader { id: osd; Osd.Osd {} }
 
@@ -189,6 +194,24 @@ ShellRoot {
         target: "mixer"
         function toggle(): void {
             mixer.activeAsync ? mixer.active = false : mixer.activeAsync = true
+        }
+    }
+
+    // `qs ipc call images open <path>` -- cyberos-images.desktop execs this,
+    // so every mime-opened picture arrives here. Reuses one window: a second
+    // open retargets the existing viewer rather than stacking windows.
+    // `active`, NOT `activeAsync`: async loading returns before the component
+    // exists, so `item` would still be null on the first open and the path
+    // would never be applied. The toggle popups can use activeAsync because
+    // they carry no argument; an open-with-path handler cannot.
+    IpcHandler {
+        target: "images"
+        function open(path: string): void {
+            images.active = true;
+            if (images.item) {
+                images.item.path = path;
+                images.item.visible = true;
+            }
         }
     }
 

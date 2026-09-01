@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Images
+Comment=View pictures
+Exec=qs ipc call images open %f
+Icon=image-x-generic
+Terminal=false
+Categories=Graphics;Viewer;
+MimeType=image/png;image/jpeg;image/gif;image/webp;image/bmp;image/svg+xml;
+Keywords=image;picture;photo;viewer;

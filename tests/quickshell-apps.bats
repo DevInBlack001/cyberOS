@@ -23,3 +23,24 @@ QS="$ROOT/profile/airootfs/etc/skel/.config/quickshell"
   run grep 'pavucontrol' "$QS/bar/Audio.qml"
   [ "$status" -ne 0 ]
 }
+
+@test "images: FloatingWindow, folder walk without the absent fileURL role" {
+  f="$QS/apps/Images.qml"
+  [ -f "$f" ]
+  grep -q 'FloatingWindow' "$f"
+  grep -q 'Qt.labs.folderlistmodel' "$f"
+  # indexOf() needs a file:// prefixed string; the fileURL role does not
+  # exist and returns undefined, which makes indexOf throw.
+  grep -q 'indexOf("file://"' "$f"
+  run grep 'fileURL' "$f"
+  [ "$status" -ne 0 ]
+}
+
+@test "images: ipc open target and desktop entry at an unowned path" {
+  grep -q 'target: "images"' "$QS/shell.qml"
+  grep -q 'function open' "$QS/shell.qml"
+  d="$ROOT/profile/airootfs/usr/local/share/applications/cyberos-images.desktop"
+  [ -f "$d" ]
+  grep -q 'Exec=qs ipc call images open %f' "$d"
+  grep -q 'MimeType=image/' "$d"
+}
