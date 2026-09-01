@@ -42,7 +42,7 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
 @test "audio: pipewire sink with tracker, click/right-click/scroll behaviours" {
   grep -q 'Pipewire.defaultAudioSink' "$QS/bar/Audio.qml"
   grep -q 'PwObjectTracker' "$QS/bar/Audio.qml"
-  grep -q 'pavucontrol' "$QS/bar/Audio.qml"
+  grep -q 'pavucontrol-qt' "$QS/bar/Audio.qml"
 }
 
 @test "battery: hidden on desktops, warn/critical colours from Theme" {
@@ -194,12 +194,6 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   grep -q 'onFileChanged: reload()' "$QS/Theme.qml"
 }
 
-@test "the stray About Xfce entry from libxfce4ui is hidden" {
-  f="$ROOT/profile/airootfs/etc/skel/.local/share/applications/xfce4-about.desktop"
-  [ -f "$f" ]
-  grep -q '^NoDisplay=true' "$f"
-}
-
 # Security: Text's default textFormat (AutoText) auto-detects and renders
 # HTML-like content. BarModule's label carries MPRIS track metadata and
 # WindowTitle carries a window's own title -- both set by something this
@@ -208,4 +202,40 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
 @test "bar chip label/icon and the window title are rendered as plain text" {
   grep -q 'textFormat: Text.PlainText' "$QS/bar/WindowTitle.qml"
   awk '/text: chip\.label/,/^ *}/' "$QS/bar/BarModule.qml" | grep -q 'textFormat: Text.PlainText'
+}
+
+@test "wifi panel replaces nm-applet: surface, ipc target, chip click" {
+  [ -f "$QS/popups/WifiPanel.qml" ]
+  grep -q 'Quickshell.Networking' "$QS/popups/WifiPanel.qml"
+  grep -q 'connectWithPsk' "$QS/popups/WifiPanel.qml"
+  grep -q 'scannerEnabled' "$QS/popups/WifiPanel.qml"
+  grep -q 'target: "wifi"' "$QS/shell.qml"
+  grep -q 'qs ipc call wifi toggle\|"wifi", "toggle"' "$QS/bar/Network.qml"
+  run grep 'nm-connection-editor' "$QS/bar/Network.qml"
+  [ "$status" -ne 0 ]
+}
+
+@test "bluetooth panel replaces blueman: surface, ipc target, chip click" {
+  [ -f "$QS/popups/BluetoothPanel.qml" ]
+  grep -q 'Quickshell.Bluetooth' "$QS/popups/BluetoothPanel.qml"
+  grep -q 'pair()' "$QS/popups/BluetoothPanel.qml"
+  grep -q 'target: "bt"' "$QS/shell.qml"
+  grep -q '"bt", "toggle"' "$QS/bar/BluetoothChip.qml"
+  run grep 'blueman' "$QS/bar/BluetoothChip.qml"
+  [ "$status" -ne 0 ]
+}
+
+@test "no GTK app launch paths remain anywhere in the shell" {
+  run grep -RE 'execDetached\(\["(gtk-launch|blueman|nm-applet|nm-connection-editor|pavucontrol")' "$QS"
+  [ "$status" -ne 0 ]
+}
+
+@test "launcher groups apps into categories with a Security group" {
+  grep -q '"Security", "Development", "Internet"' "$QS/launcher/Launcher.qml"
+  grep -q 'function groupOf' "$QS/launcher/Launcher.qml"
+  grep -q 'activeGroup' "$QS/launcher/Launcher.qml"
+  grep -q '"Wireshark": "Security"' "$QS/launcher/Launcher.qml"
+  d="$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/share/applications/metasploit.desktop"
+  grep -q 'Categories=Security;' "$d"
+  grep -q 'Exec=foot' "$d"
 }

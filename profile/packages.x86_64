@@ -59,7 +59,6 @@ edk2-shell
 
 # ---- network ----
 networkmanager
-network-manager-applet
 modemmanager
 wireless-regdb
 wpa_supplicant
@@ -74,14 +73,6 @@ inetutils
 traceroute
 net-tools
 whois
-
-# ---- GTK4/libadwaita stack ----
-# python-gobject was removed with the GTK installer wizard (installer/cli-switch).
-# gtk4/libadwaita stay: no shipped app currently pulls them in, but docs/SPEC.md
-# S5.7 earmarks them for the planned cyberos-store client (CLI + GTK4/libadwaita
-# GUI) -- removing them now just means re-adding them when that lands.
-gtk4
-libadwaita
 
 # ---- firewall ----
 ufw
@@ -116,7 +107,10 @@ hyprlock
 hypridle
 hyprpolkitagent
 xdg-desktop-portal-hyprland
-xdg-desktop-portal-gtk
+# Qt file-chooser/settings portal -- hyprland's portal has no FileChooser.
+# Replaces xdg-desktop-portal-gtk; /etc/xdg-desktop-portal/hyprland-portals.conf
+# routes FileChooser here.
+xdg-desktop-portal-kde
 xdg-user-dirs
 quickshell
 grim
@@ -130,7 +124,6 @@ libqalculate
 brightnessctl
 playerctl
 pamixer
-nwg-look
 kanshi
 
 # ---- display manager ----
@@ -148,10 +141,9 @@ pipewire-alsa
 pipewire-pulse
 pipewire-jack
 wireplumber
-pavucontrol
+pavucontrol-qt
 bluez
 bluez-utils
-blueman
 
 # ---- terminal / editors ----
 foot
@@ -166,20 +158,23 @@ lazygit
 
 # ---- apps ----
 firefox
-thunar
-thunar-archive-plugin
-thunar-volman
-gvfs
-gvfs-mtp
-file-roller
-tumbler
-imv
+# Qt6/KDE app suite -- GTK apps (thunar, file-roller, gnome-*) are gone.
+dolphin
+ark
+# kio-extras: MTP/SMB/etc URLs in dolphin; kio-fuse: lets non-KDE apps open
+# kio URLs; udisks2: removable-drive mounting via Solid.
+kio-extras
+kio-fuse
+udisks2
+# video + document thumbnails in dolphin
+ffmpegthumbs
+kdegraphics-thumbnailers
+gwenview
 mpv
-zathura
-zathura-pdf-mupdf
-gnome-calculator
-gnome-text-editor
-gnome-disk-utility
+okular
+kcalc
+kate
+partitionmanager
 
 # ---- virtualization ----
 virtualbox
@@ -197,8 +192,8 @@ noto-fonts-emoji
 ttf-liberation
 ttf-dejavu
 papirus-icon-theme
-adwaita-icon-theme
-gnome-themes-extra
+adwaita-cursors
+breeze-icons
 kvantum
 qt5ct
 qt6ct

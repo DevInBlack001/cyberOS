@@ -12,5 +12,5 @@ BarModule {
     iconColor: anyConnected ? Cyber.Theme.accent : Cyber.Theme.fg
     tooltip: adapter?.enabled ? (anyConnected ? "Connected" : "On") : "Off"
 
-    onClicked: Quickshell.execDetached(["blueman-manager"])
+    onClicked: Quickshell.execDetached(["qs", "ipc", "call", "bt", "toggle"])
 }

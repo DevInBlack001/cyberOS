@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Metasploit Console
+Comment=msfconsole — the Metasploit Framework interactive console
+Exec=foot --title=Metasploit msfconsole
+Icon=utilities-terminal
+Terminal=false
+Categories=Security;
+Keywords=exploit;pentest;msf;metasploit;

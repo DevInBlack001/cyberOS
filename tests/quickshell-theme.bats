@@ -58,3 +58,16 @@ PY
   [ -x "$QMLLINT" ] || skip "qmllint not installed"
   "$QMLLINT" --bare "$QS/Theme.qml"
 }
+
+@test "theme toggle flips gtk3 prefer-dark + qt6ct palette; gsettings gone" {
+  t="$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-theme"
+  run grep 'gsettings' "$t"
+  [ "$status" -ne 0 ]
+  grep -q 'gtk-application-prefer-dark-theme' "$t"
+  grep -q 'qt6ct.conf' "$t"
+  grep -q 'color_scheme_path' "$t"
+  grep -q 'gtk-theme-name=.*Adwaita-dark' "$t"
+  grep -q 'gtk-icon-theme-name=.*Papirus' "$t"
+  grep -q 'kdeglobals' "$t"
+  grep -q 'icon_theme=' "$t"
+}
