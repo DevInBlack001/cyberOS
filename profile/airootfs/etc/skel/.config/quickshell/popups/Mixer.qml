@@ -28,15 +28,18 @@ PanelWindow {
     focusable: true
     aboveWindows: true
 
+    // Track EVERY node, not the filtered subset. PwNode.type stays
+    // PwNodeType.Untracked (0) until something tracks the node, so filtering
+    // first and tracking the result is circular: the filter matches nothing,
+    // so nothing gets tracked, so the filter keeps matching nothing and the
+    // panel is permanently empty. Verified: before tracking, Pipewire.nodes
+    // is empty; after tracking all, types resolve to 17 (AudioSink) / 9
+    // (AudioSource) / 21 (AudioOutStream).
+    PwObjectTracker { objects: Pipewire.nodes.values }
+
     readonly property var sinks: Pipewire.nodes.values.filter(n => n.type === PwNodeType.AudioSink)
     readonly property var streams: Pipewire.nodes.values.filter(n => n.type === PwNodeType.AudioOutStream)
     readonly property var source: Pipewire.defaultAudioSource
-
-    // A node's `audio` properties stay unbound until something tracks it --
-    // the same requirement bar/Audio.qml satisfies for the default sink.
-    PwObjectTracker {
-        objects: root.sinks.concat(root.streams).concat(root.source ? [root.source] : [])
-    }
 
     // Applications set application.name; fall back through description to the
     // raw node name so a stream is never rendered as a blank row.

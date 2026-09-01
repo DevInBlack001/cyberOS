@@ -14,6 +14,12 @@ QS="$ROOT/profile/airootfs/etc/skel/.config/quickshell"
   # playing app as an output device. Guard the trap, not just the feature.
   run grep -E '\.isSink|\.isStream' "$f"
   [ "$status" -ne 0 ]
+  # The tracker must cover every node, not the filtered subset: PwNode.type
+  # is Untracked until tracked, so filter-then-track is circular and leaves
+  # the panel permanently empty. Found in VM testing, invisible to qmllint.
+  grep -q 'objects: Pipewire.nodes.values' "$f"
+  run grep -E 'objects: root\.(sinks|streams)' "$f"
+  [ "$status" -ne 0 ]
 }
 
 @test "mixer: wired into the shell and owns the bar's audio chip" {
