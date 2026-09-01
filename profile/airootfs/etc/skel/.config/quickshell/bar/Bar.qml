@@ -34,7 +34,6 @@ PanelWindow {
             anchors { right: parent.right; verticalCenter: parent.verticalCenter; rightMargin: 10 }
             spacing: 8
             Tray {}
-            Brightness {}
             BluetoothChip {}
             Audio {}
             Network {}

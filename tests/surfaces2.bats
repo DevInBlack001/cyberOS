@@ -349,6 +349,9 @@ run_hypr_config() {
   # a package line, a config path, an autostart -- and fails this test. This
   # is meaningful, not vacuous: proven RED by temporarily reintroducing a
   # bare "rofi" package line (self-review), which this same pipeline catches.
-  run bash -c "grep -rniE 'rofi|mako' '$ROOT/profile/' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(#|//|--)'"
+  # \b matters: without it this matched the "rofi" inside "profile", so any
+  # power-PROFIle word (power-profiles-daemon, PowerProfiles) failed the gate.
+  # Still catches a bare "rofi" package line or a rofi-calc/rofi.rasi path.
+  run bash -c "grep -rniE '\\brofi\\b|\\bmako\\b' '$ROOT/profile/' | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(#|//|--)'"
   [ -z "$output" ]
 }

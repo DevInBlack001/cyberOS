@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import Quickshell.Services.UPower
 import ".." as Cyber
 
@@ -30,5 +31,7 @@ BarModule {
     label: Math.round(pct * 100) + "%"
     tooltip: charging ? "Charging" : "On battery"
 
-    onClicked: powerMenu.activeAsync = true
+    // Opens the power panel (profile + live watts), NOT the shutdown menu --
+    // the bar's own power button owns sleep/lock/restart/shutdown.
+    onClicked: Quickshell.execDetached(["qs", "ipc", "call", "powerprofile", "toggle"])
 }
