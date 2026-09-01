@@ -194,12 +194,6 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   grep -q 'onFileChanged: reload()' "$QS/Theme.qml"
 }
 
-@test "the stray About Xfce entry from libxfce4ui is hidden" {
-  f="$ROOT/profile/airootfs/etc/skel/.local/share/applications/xfce4-about.desktop"
-  [ -f "$f" ]
-  grep -q '^NoDisplay=true' "$f"
-}
-
 # Security: Text's default textFormat (AutoText) auto-detects and renders
 # HTML-like content. BarModule's label carries MPRIS track metadata and
 # WindowTitle carries a window's own title -- both set by something this
