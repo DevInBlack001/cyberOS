@@ -16,6 +16,9 @@ Name the branch for the area it touches:
 | `packages/` | what ships in the ISO | `profile/packages.x86_64`, `aur/` |
 | `build/` | build and test tooling | `build.sh`, `test-vm.sh`, `profiledef.sh`, `pacman.conf.in` |
 | `docs/` | documentation | `README.md`, `docs/` |
+| `security/` | sshd, firewall, package signing, audit | `sshd_config.d/`, `ufw`, `pacman.conf.in` (`SigLevel`) |
+| `hardware/` | kernel set, boot entries, drivers, firmware | `packages.x86_64`, `efiboot/`, `syslinux/` |
+| `fix/` | a bug fix named for the bug rather than the area | none — see below |
 
 ```bash
 git switch main && git pull
@@ -24,8 +27,13 @@ git switch -c theme/sddm-clock-overlap
 git push -u origin theme/sddm-clock-overlap
 ```
 
-A bug fix goes on the prefix of whatever it fixes — a broken keybind is
-`theme/`, a failing install is `installer/`.
+A bug fix normally takes the prefix of whatever it fixes — a broken keybind
+is `theme/`, a failing install is `installer/`. `fix/` is the accepted
+alternative when naming the branch for the bug reads better than naming it
+for the area, the way `fix/uefi-boot-thinkpad` (PR #19) was.
+
+Every branch also needs a charter — see
+[Branch charters](#branch-charters) below.
 
 **Keep branches short-lived.** The ISO is built from one tree, so an area
 branch cannot ship on its own, and the busiest files are shared: `hyprland.lua`,
@@ -34,6 +42,19 @@ package work alike. Small PRs merged quickly beat long-running branches.
 
 `.github/CODEOWNERS` maps these areas to reviewers, so the right person is
 requested automatically.
+
+### Branch charters
+
+[docs/branches/README.md](docs/branches/README.md) is the binding authority
+on branching — this section only surfaces the rules a contributor would
+otherwise miss:
+
+* **Add a charter in `docs/branches/`** in the same commit as the first piece
+  of work on a branch, not after the fact.
+* **A branch owns one area.** A change spanning two areas is two branches and
+  two pull requests.
+* **Rebase onto `main` before opening the PR.** Do not merge `main` into your
+  branch.
 
 ## Before you start
 
@@ -47,6 +68,8 @@ requested automatically.
   `repo/` and `aur/*.deb` — no ISOs or built packages in git.
 
 ## Testing
+
+Requires `bats` (`sudo pacman -S bats`).
 
 ```bash
 bats tests/          # the whole suite -- fast, no root, no VM
@@ -72,9 +95,11 @@ you the machine boots.
 ## Commits
 
 Subject line: `area: imperative lower-case summary`, no trailing period, kept
-under about 70 characters. The area is the same vocabulary as the branch
-prefixes — `installer`, `theme`, `packages`, `build`, `docs`, `tests` — plus the
-finer-grained ones the shell work uses: `shell`, `bar`, `apps`, `files`,
+under about 70 characters. Commit areas are finer-grained than branch
+prefixes, not the same vocabulary — a `shell/` branch, for instance, commits
+as whichever of `shell`, `bar`, `apps`, `files`, `images`, `mixer` or
+`desktop` the change actually touches. In use: `installer`, `theme`,
+`packages`, `build`, `docs`, `tests`, `shell`, `bar`, `apps`, `files`,
 `images`, `mixer`, `desktop`, `security`.
 
 ```
@@ -100,8 +125,10 @@ installed there is nothing to remember:
 git config core.hooksPath .githooks
 ```
 
-A human collaborator's `Co-Authored-By:` is untouched — use it when someone
-genuinely co-wrote the change.
+A human collaborator's `Co-Authored-By:` is untouched, unless their name
+happens to start with "Claude" — the hook matches on the trailer text, not on
+humanity. A contributor in that position should add the trailer after
+committing (`git commit --amend`) or commit with `--no-verify`.
 
 If a trailer slips through on a commit you have not pushed yet:
 

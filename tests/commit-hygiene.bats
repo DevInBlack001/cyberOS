@@ -27,8 +27,8 @@ HOOK="$ROOT/.githooks/commit-msg"
   ! grep -qi 'claude' "$msg"
 }
 
-# Lower-case and indented spellings still have to be caught -- a trailer that
-# survives because of its capitalisation is the whole failure mode.
+# Lower-case spellings still have to be caught -- a trailer that survives
+# because of its capitalisation is the whole failure mode.
 @test "the hook is case-insensitive about the trailer key" {
   msg="$BATS_TEST_TMPDIR/msg"
   printf '%s\n' \
@@ -39,6 +39,28 @@ HOOK="$ROOT/.githooks/commit-msg"
   "$HOOK" "$msg"
 
   ! grep -qi 'claude' "$msg"
+}
+
+# An indented line only *looks* like a trailer: inside a code block or a
+# quoted example it is body prose the author wrote on purpose, and
+# `git interpret-trailers --parse` agrees it isn't a trailer. The hook only
+# matches column 0, so it must survive -- while a real trailer in the same
+# message still gets stripped.
+@test "an indented trailer inside quoted body text survives" {
+  msg="$BATS_TEST_TMPDIR/msg"
+  printf '%s\n' \
+    'docs: show what the hook strips' \
+    '' \
+    'Example of what the hook removes:' \
+    '' \
+    '    Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>' \
+    '' \
+    'Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>' > "$msg"
+
+  "$HOOK" "$msg"
+
+  grep -q '^    Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>' "$msg"
+  ! grep -q '^Co-Authored-By: Claude' "$msg"
 }
 
 # The hook must not become a blunt instrument against human collaborators.
@@ -89,6 +111,8 @@ HOOK="$ROOT/.githooks/commit-msg"
   grep -q 'bats tests/'  "$ROOT/CONTRIBUTING.md"
   grep -q './build.sh'   "$ROOT/CONTRIBUTING.md"
   grep -q './test-vm.sh' "$ROOT/CONTRIBUTING.md"
+  [ -x "$ROOT/build.sh" ]
+  [ -x "$ROOT/test-vm.sh" ]
 }
 
 @test "CONTRIBUTING.md documents installing the hook" {
@@ -97,7 +121,7 @@ HOOK="$ROOT/.githooks/commit-msg"
 
 # One source of truth: the README must point at CONTRIBUTING.md rather than
 # keeping its own copy of the branch table that can drift out of step.
-@test "README delegates contributing to CONTRIBUTING.md and keeps no rival copy" {
+@test "README delegates to CONTRIBUTING.md and keeps no rival copy" {
   grep -q 'CONTRIBUTING.md' "$ROOT/README.md"
   ! grep -q '^| `installer/` |' "$ROOT/README.md"
 }

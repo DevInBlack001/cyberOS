@@ -198,7 +198,8 @@ blue/magenta/cyan follow the macOS system colours.
 
 Branch off `main`, name the branch for the area it touches (`installer/`,
 `theme/`, `packages/`, `build/`, `docs/`), open a pull request, and delete the
-branch after it merges. Run `bats tests/` before you open it.
+branch after it merges. Run `git config core.hooksPath .githooks` once per
+clone and `bats tests/` before you open it.
 
 The full guide — branch prefixes and their paths, the fresh-clone warning, the
 test and build commands, and the commit conventions — is in

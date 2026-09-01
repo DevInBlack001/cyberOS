@@ -6,6 +6,10 @@
 # by default; this removes them so nobody has to remember to. A human
 # co-author is left alone -- only the AI trailers go.
 #
+# Only matches at column 0. An indented line -- inside a code block, a quoted
+# example, or pasted diff context -- is body prose, not a trailer, and is
+# left alone even if it reads like one.
+#
 # Install (see CONTRIBUTING.md):
 #     git config core.hooksPath .githooks
 #
@@ -14,11 +18,16 @@
 # trailers by hand.
 set -euo pipefail
 
-MSG=$1
+MSG=${1:-}
+
+if [[ -z "$MSG" || ! -f "$MSG" ]]; then
+  echo "commit-msg: expected a commit message file path, got: '${MSG:-<empty>}'" >&2
+  exit 1
+fi
 
 awk '
-  tolower($0) ~ /^[[:space:]]*co-authored-by:[[:space:]]*claude/ { next }
-  tolower($0) ~ /^[[:space:]]*claude-session:/                   { next }
+  tolower($0) ~ /^co-authored-by:[[:space:]]*claude/ { next }
+  tolower($0) ~ /^claude-session:/                   { next }
   { lines[++n] = $0 }
   END {
     # Removing a trailer block can leave the message ending in blank lines.
