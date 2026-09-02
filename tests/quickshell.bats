@@ -126,13 +126,36 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   ! grep -qE 'rofi -show drun|rofi -show calc' "$ROOT/profile/airootfs/etc/skel/.config/hypr/hyprland.lua"  # calc became a quickshell surface in Task 4; see tests/surfaces2.bats
 }
 
-@test "launcher: centred focusable panel, GridView + filter, noDisplay excluded" {
+@test "launcher: centred focusable panel, ListView + filter, noDisplay excluded" {
   grep -q 'PanelWindow' "$QS/launcher/Launcher.qml"
   grep -q 'focusable: true' "$QS/launcher/Launcher.qml"
-  grep -q 'GridView' "$QS/launcher/Launcher.qml"
+  grep -q 'ListView' "$QS/launcher/Launcher.qml"
   grep -q 'noDisplay' "$QS/launcher/Launcher.qml"
   grep -q 'execute()' "$QS/launcher/Launcher.qml"
   grep -q 'closeRequested' "$QS/launcher/Launcher.qml"
+}
+
+@test "launcher: minimal TUI list -- sharp corners, accent border, app name is plain text" {
+  f="$QS/launcher/Launcher.qml"
+  grep -qE 'radius:\s*0' "$f"
+  grep -qE 'border\.color:\s*Cyber\.Theme\.accent' "$f"
+  grep -q 'ObjectComparison.Identity' "$f"
+  grep -qE 'text: cell\.modelData\.name' "$f"
+  awk '/text: cell\.modelData\.name/,/^ *}/' "$f" | grep -q 'textFormat: Text.PlainText'
+}
+
+@test "launcher: categories switch by keyboard (Left/Right, Tab/Backtab), not mouse scroll" {
+  f="$QS/launcher/Launcher.qml"
+  grep -q 'function cycleGroup' "$f"
+  grep -qE 'case Qt\.Key_Right:' "$f"
+  grep -qE 'case Qt\.Key_Left:' "$f"
+  grep -q 'root.cycleGroup(1)' "$f"
+  grep -q 'root.cycleGroup(-1)' "$f"
+  # No wheel/drag path -- catList only moves in response to activeGroup,
+  # driven by the key handler above.
+  ! grep -q 'WheelHandler' "$f"
+  grep -qE 'interactive:\s*false' "$f"
+  grep -q 'positionViewAtIndex' "$f"
 }
 
 @test "bar: apps chip is the first left module, toggles the launcher" {

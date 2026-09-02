@@ -21,13 +21,13 @@ PanelWindow {
     signal closeRequested()
 
     anchors { left: false; right: false; top: false; bottom: false }
-    implicitWidth: 560
-    implicitHeight: 460
+    implicitWidth: 360
+    implicitHeight: 560
     color: "transparent"
     focusable: true
     aboveWindows: true
 
-    readonly property int columns: 5
+    readonly property int rowHeight: 26
 
     // Category chips. First match in priority order wins; anything unmatched
     // lands in Utilities. freedesktop "Security" is a registered additional
@@ -37,6 +37,14 @@ PanelWindow {
     readonly property var groups: ["All", "Security", "Development", "Internet",
         "Office", "Graphics", "Media", "System", "Utilities"]
     property string activeGroup: "All"
+
+    // Tab/Backtab and Left/Right both drive this -- keyboard-only category
+    // switching, no scrolling required to reach a chip off the edge of the
+    // panel's width. catList (below) keeps the active chip in view itself.
+    function cycleGroup(delta) {
+        const i = root.groups.indexOf(root.activeGroup);
+        root.activeGroup = root.groups[(i + delta + root.groups.length) % root.groups.length];
+    }
 
     readonly property var nameOverrides: ({
         "Wireshark": "Security",
@@ -74,7 +82,7 @@ PanelWindow {
     }
     // Re-select the first result whenever the filtered set changes (every
     // keystroke) -- matches rofi (typing always re-highlights the top hit).
-    onFilteredChanged: grid.currentIndex = filtered.length > 0 ? 0 : -1
+    onFilteredChanged: list.currentIndex = filtered.length > 0 ? 0 : -1
 
     // No highlighted entry (empty filter results) is a no-op, not a close --
     // matches rofi: Return with nothing matched does nothing, it doesn't
@@ -85,130 +93,148 @@ PanelWindow {
         root.closeRequested();
     }
 
+    // Sharp corners, a single hairline border, no chip/pill decoration below
+    // -- a plain terminal box rather than the rest of the shell's rounded
+    // Theme.radius look, deliberately: this is the one surface styled after
+    // a minimal TUI launcher (dmenu/fzf), not the desktop chrome around it.
+    // Border is Theme.accent (green), not the neutral Theme.border every
+    // other panel uses: it ties the box outline to the same colour as the
+    // prompt glyph and the selection/active-category markers inside it,
+    // over Theme.accent2 (gold) which would compete with the launch icons'
+    // own colours instead of framing them.
     Rectangle {
         anchors.fill: parent
-        radius: Cyber.Theme.radius
+        radius: 0
         color: Cyber.Theme.bg
         border.width: 1
-        border.color: Cyber.Theme.border
+        border.color: Cyber.Theme.accent
 
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 10
             spacing: 8
 
-            TextField {
-                id: filterField
-                Layout.fillWidth: true
-                placeholderText: "Search applications..."
-                placeholderTextColor: Cyber.Theme.muted
-                color: Cyber.Theme.fg
-                font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize + 2 }
-                selectByMouse: true
-                background: Rectangle { color: "transparent" }
-
-                // Grid navigation lives on the filter field, not the
-                // GridView: the field holds focus for the whole time the
-                // launcher is open (typing always works) and forwards the
-                // keys the grid cares about to GridView's own
-                // moveCurrentIndex*() methods -- grid-aware (wraps at
-                // row/column boundaries per GridView's own semantics)
-                // without hand-rolled index-plus-or-minus-columns math.
-                // Unhandled keys fall through to normal text editing since
-                // event.accepted is only set for the cases below.
-                Keys.onPressed: event => {
-                    switch (event.key) {
-                    case Qt.Key_Down:
-                        grid.moveCurrentIndexDown();
-                        event.accepted = true;
-                        break;
-                    case Qt.Key_Up:
-                        grid.moveCurrentIndexUp();
-                        event.accepted = true;
-                        break;
-                    case Qt.Key_Left:
-                        grid.moveCurrentIndexLeft();
-                        event.accepted = true;
-                        break;
-                    case Qt.Key_Right:
-                        grid.moveCurrentIndexRight();
-                        event.accepted = true;
-                        break;
-                    case Qt.Key_Tab: {
-                        const i = root.groups.indexOf(root.activeGroup);
-                        root.activeGroup = root.groups[(i + 1) % root.groups.length];
-                        event.accepted = true;
-                        break;
-                    }
-                    case Qt.Key_Backtab: {
-                        const i = root.groups.indexOf(root.activeGroup);
-                        root.activeGroup = root.groups[(i - 1 + root.groups.length) % root.groups.length];
-                        event.accepted = true;
-                        break;
-                    }
-                    case Qt.Key_Return:
-                    case Qt.Key_Enter:
-                        root.launch(root.filtered[grid.currentIndex]);
-                        event.accepted = true;
-                        break;
-                    case Qt.Key_Escape:
-                        root.closeRequested();
-                        event.accepted = true;
-                        break;
-                    }
-                }
-            }
-
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 4
-                Repeater {
-                    model: root.groups
-                    delegate: Rectangle {
-                        id: chip
-                        required property string modelData
-                        implicitWidth: chipLabel.implicitWidth + 14
-                        implicitHeight: chipLabel.implicitHeight + 8
-                        radius: height / 2
-                        color: root.activeGroup === chip.modelData ? Cyber.Theme.sel : "transparent"
-                        border.width: 1
-                        border.color: root.activeGroup === chip.modelData ? Cyber.Theme.accent : Cyber.Theme.border
+                spacing: 6
 
-                        Text {
-                            id: chipLabel
-                            anchors.centerIn: parent
-                            text: chip.modelData
-                            color: root.activeGroup === chip.modelData ? Cyber.Theme.fg : Cyber.Theme.muted
-                            font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 3 }
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: root.activeGroup = chip.modelData
+                Text {
+                    text: ">"
+                    color: Cyber.Theme.accent
+                    font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize + 2; bold: true }
+                }
+
+                TextField {
+                    id: filterField
+                    Layout.fillWidth: true
+                    placeholderText: "search applications..."
+                    placeholderTextColor: Cyber.Theme.muted
+                    color: Cyber.Theme.fg
+                    font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize + 2 }
+                    selectByMouse: true
+                    background: Rectangle { color: "transparent" }
+
+                    // List navigation and category switching both live on the
+                    // filter field, not on the ListViews themselves: the
+                    // field holds focus for the whole time the launcher is
+                    // open (typing always works) and forwards the keys they
+                    // care about. Left/Right switch categories -- the same
+                    // action as Tab/Backtab -- rather than moving the text
+                    // cursor: a keyboard-only launcher has no scrollbar or
+                    // wheel to reach for, so both the arrow keys and Tab
+                    // reach every category without one.
+                    Keys.onPressed: event => {
+                        switch (event.key) {
+                        case Qt.Key_Down:
+                            list.incrementCurrentIndex();
+                            event.accepted = true;
+                            break;
+                        case Qt.Key_Up:
+                            list.decrementCurrentIndex();
+                            event.accepted = true;
+                            break;
+                        case Qt.Key_Right:
+                        case Qt.Key_Tab:
+                            root.cycleGroup(1);
+                            event.accepted = true;
+                            break;
+                        case Qt.Key_Left:
+                        case Qt.Key_Backtab:
+                            root.cycleGroup(-1);
+                            event.accepted = true;
+                            break;
+                        case Qt.Key_Return:
+                        case Qt.Key_Enter:
+                            root.launch(root.filtered[list.currentIndex]);
+                            event.accepted = true;
+                            break;
+                        case Qt.Key_Escape:
+                            root.closeRequested();
+                            event.accepted = true;
+                            break;
                         }
                     }
                 }
             }
 
-            GridView {
-                id: grid
+            Rectangle { Layout.fillWidth: true; height: 1; color: Cyber.Theme.accent }
+
+            // Horizontal ListView, not a RowLayout: nine chips plus brackets
+            // on the active one don't fit the panel's narrow width, and a
+            // RowLayout has no way to bring an off-screen chip into view.
+            // No wheel/drag handling here on purpose -- Left/Right and
+            // Tab/Backtab (filterField's Keys.onPressed) are the only way to
+            // change category, and positionViewAtIndex below keeps whichever
+            // one is active on-screen, clipped or not.
+            ListView {
+                id: catList
+                Layout.fillWidth: true
+                Layout.preferredHeight: Cyber.Theme.fontSize + 8
+                orientation: ListView.Horizontal
+                clip: true
+                spacing: 14
+                interactive: false
+
+                Connections {
+                    target: root
+                    function onActiveGroupChanged() {
+                        catList.positionViewAtIndex(root.groups.indexOf(root.activeGroup), ListView.Contain);
+                    }
+                }
+
+                model: root.groups
+                delegate: Text {
+                    id: chip
+                    required property string modelData
+                    text: root.activeGroup === chip.modelData ? "[" + chip.modelData + "]" : chip.modelData
+                    color: root.activeGroup === chip.modelData ? Cyber.Theme.accent : Cyber.Theme.muted
+                    font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 3 }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: root.activeGroup = chip.modelData
+                    }
+                }
+            }
+
+            ListView {
+                id: list
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
-                cellWidth: width / root.columns
-                cellHeight: 96
                 currentIndex: 0
 
                 // A plain JS array bound straight to `model:` is treated as
                 // a brand-new model on every reassignment -- QQmlDelegateModel
                 // has no way to tell "same list, some entries added/removed"
                 // from "unrelated new list", so it destroys and recreates
-                // every delegate (all IconImages included) on every
-                // keystroke. Measured before this fix: opening the launcher
-                // and typing two characters ("f" then "fi") produced ~1250
-                // delegate creations/destructions total, including repeat
-                // churn for apps present in *both* filter results -- a real
-                // flicker/lag risk under the spec's safe-graphics (software
-                // rendering) constraint.
+                // every delegate on every keystroke. Measured before this
+                // fix (back when this was a GridView with icon delegates):
+                // opening the launcher and typing two characters ("f" then
+                // "fi") produced ~1250 delegate creations/destructions
+                // total, including repeat churn for apps present in *both*
+                // filter results -- a real flicker/lag risk under the spec's
+                // safe-graphics (software rendering) constraint.
                 //
                 // ScriptModel (Quickshell core) exists precisely for this:
                 // it wraps a JS array as a real QAbstractListModel and diffs
@@ -220,13 +246,7 @@ PanelWindow {
                 // DesktopEntries singleton, never recreated between
                 // keystrokes -- so an app present in both the old and new
                 // filtered set is recognised as the *same* row and its
-                // delegate (and its IconImage) is kept alive, not rebuilt.
-                // Verified at runtime with temporary onCompleted/
-                // onDestruction counters on the delegate: the same two
-                // keystrokes after this fix produced zero destroy/recreate
-                // churn for entries unaffected by the filter change (see
-                // task-6-report.md's fix-report addendum for the exact
-                // before/after counts).
+                // delegate is kept alive, not rebuilt.
                 model: ScriptModel {
                     values: root.filtered
                     comparisonMode: ObjectComparison.Identity
@@ -236,49 +256,44 @@ PanelWindow {
                     id: cell
                     required property var modelData
                     required property int index
-                    width: grid.cellWidth
-                    height: grid.cellHeight
+                    width: list.width
+                    height: root.rowHeight
 
-                    Rectangle {
+                    RowLayout {
                         anchors.fill: parent
-                        anchors.margins: 3
-                        radius: Cyber.Theme.radius / 2
-                        color: cell.index === grid.currentIndex ? Cyber.Theme.sel : "transparent"
+                        anchors.leftMargin: 4
+                        anchors.rightMargin: 4
+                        spacing: 8
 
-                        ColumnLayout {
-                            anchors.fill: parent
-                            anchors.margins: 6
-                            spacing: 4
-
-                            IconImage {
-                                Layout.alignment: Qt.AlignHCenter
-                                implicitSize: 40
-                                // Two-arg fallback overload: an entry whose
-                                // `icon` doesn't resolve in the icon theme
-                                // (host-app-index dependent, e.g. some
-                                // packages ship a broken Icon= key) gets a
-                                // generic placeholder instead of Image
-                                // logging a "could not load icon" warning.
-                                source: Quickshell.iconPath(cell.modelData.icon, "application-x-executable")
-                            }
-                            Text {
-                                Layout.fillWidth: true
-                                Layout.alignment: Qt.AlignHCenter
-                                text: cell.modelData.name
-                                color: Cyber.Theme.fg
-                                font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 2 }
-                                horizontalAlignment: Text.AlignHCenter
-                                elide: Text.ElideRight
-                                maximumLineCount: 1
-                            }
+                        Text {
+                            text: cell.index === list.currentIndex ? ">" : " "
+                            color: Cyber.Theme.accent
+                            font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize }
                         }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onEntered: grid.currentIndex = cell.index
-                            onClicked: root.launch(cell.modelData)
+                        IconImage {
+                            implicitSize: 16
+                            // Same fallback as the old grid delegate: an entry
+                            // whose `icon` doesn't resolve in the icon theme
+                            // gets a generic placeholder instead of a blank
+                            // gap in the row.
+                            source: Quickshell.iconPath(cell.modelData.icon, "application-x-executable")
                         }
+                        Text {
+                            Layout.fillWidth: true
+                            text: cell.modelData.name
+                            textFormat: Text.PlainText
+                            color: cell.index === list.currentIndex ? Cyber.Theme.fg : Cyber.Theme.muted
+                            elide: Text.ElideRight
+                            maximumLineCount: 1
+                            font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize }
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onEntered: list.currentIndex = cell.index
+                        onClicked: root.launch(cell.modelData)
                     }
                 }
             }
