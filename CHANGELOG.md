@@ -37,6 +37,20 @@ own build metadata — not SemVer.
   before handing the disk to `wipefs`/`sgdisk -Z`. A still-mounted partition
   makes both fail. `unmount_disk` now runs before partitioning in every mode
   (erase, manual, alongside), not just the one that reproduced the bug.
+- `cyberos-systemhealth-state` and `cyberos-toggle-touchscreen` were never
+  registered in `profiledef.sh`'s `file_permissions`, so both shipped
+  non-executable on a real ISO (mkarchiso copies `airootfs/` with
+  `--no-preserve=mode`, so git's own tracked mode bit isn't enough).
+  System Health's data process and the touchscreen keybind both silently
+  did nothing. Added a general regression guard, driven by git's own mode
+  bit rather than a hand-maintained list, so a future script can't ship
+  the same way.
+- Five bats assertions used a `!`-negated `grep` that wasn't the body's
+  last statement; bash exempts a `!`-negated command from `errexit`
+  regardless of position, so only a test body's final statement actually
+  decides pass/fail, an earlier failing assertion was silently swallowed.
+  Converted to this repo's own `run cmd; [ "$status" -ne 0 ]` idiom, which
+  doesn't depend on statement position.
 
 ### Added
 
@@ -58,6 +72,18 @@ own build metadata — not SemVer.
   (`cyberos-systemhealth-state`, no root, no sudoers changes) is vendored
   close to its original form since it had no such dependency. Adds
   `lm_sensors` for CPU temperature reporting.
+- Music Flow: a now-playing bar chip (left side, where the old single-line
+  `Media.qml` sat) opening a floating panel with track info, playback
+  controls, and a source selector when more than one media player is
+  running. Inspired by the UX of `DevInBlack001/Omarchy-music-flow-copy`
+  (a fork of Clifford Baidoo's `omarchy-music-flow`, security-audited
+  earlier in this same pass), but not a port of it: that plugin shells
+  out to scrape browser windows and PipeWire streams and fetches album
+  art from an allowlisted CDN. This is a fresh implementation using only
+  Quickshell's own local `Quickshell.Services.Mpris` D-Bus service, no
+  subprocess, no network call, no scraping. Album art only ever displays
+  a `file://` URL a player already has on disk; an `http(s)://` one is
+  never handed to `Image`.
 
 ### Changed
 

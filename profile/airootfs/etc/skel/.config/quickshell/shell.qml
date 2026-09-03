@@ -137,6 +137,16 @@ ShellRoot {
         Popups.SystemHealth {}
     }
 
+    // Always active for the same reason as systemhealth above:
+    // bar/MusicFlowChip.qml reads `player` from here to colour/label itself
+    // even while the panel is closed, and both need to agree on which MPRIS
+    // player is "active" when more than one is running.
+    LazyLoader {
+        id: musicflow
+        active: true
+        Popups.MusicFlow {}
+    }
+
     // `qs ipc call notify dnd` -- replaces mako's own notification pipeline;
     // toggles do-not-disturb (see bar/NotifyChip.qml for the bar-side toggle).
     IpcHandler {
@@ -270,6 +280,15 @@ ShellRoot {
         function open(): void { systemhealth.item?.open(); }
         function close(): void { systemhealth.item?.close(); }
         function toggle(): void { systemhealth.item?.toggle(); }
+    }
+
+    // `qs ipc call musicflow toggle` -- bar/MusicFlowChip.qml's own click
+    // handler, same shape as systemhealth above.
+    IpcHandler {
+        target: "musicflow"
+        function open(): void { musicflow.item?.open(); }
+        function close(): void { musicflow.item?.close(); }
+        function toggle(): void { musicflow.item?.toggle(); }
     }
 
     // Keeps Pipewire's default-sink properties valid/subscribed for the OSD
