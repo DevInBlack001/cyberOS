@@ -78,6 +78,12 @@ own build metadata — not SemVer.
 
 ### Added
 
+- `aether` (`aur/packages.txt`, github.com/bjarneo/aether): a native theming
+  tool so a student can change their own colour scheme at any time, not just
+  toggle CyberOS's own light/dark palette. Built-in presets (Dracula, Nord,
+  Gruvbox, Catppuccin, and others) plus generating a palette from any
+  wallpaper. Standalone (no Omarchy dependency), independent of
+  `cyberos-theme`: the two coexist rather than one replacing the other.
 - `cyberos-arch-audit.timer`/`.service`: a weekly `arch-audit` run on
   installed systems, reporting known CVEs in installed packages against
   the pinned channel to the journal (`docs/SPEC.md` S4). Enabled by the
@@ -147,6 +153,14 @@ own build metadata — not SemVer.
   headless xdg-desktop-portal-kde, purely as the file-dialog backend.
 - Added xdg-utils and trash-cli: the QML file manager opens files through
   xdg-open and deletes through trash-put, never rm.
+- Replaced the default desktop wallpaper (`wallpaper.png`, `wallpaper-dark.png`,
+  `wallpaper-light.png`) with new artwork. This bypasses the `theme/macos-palette`
+  branch's usual `assets/wallpaper*.svg` -> rendered-PNG pipeline (the new
+  files are supplied as raster artwork directly), so `assets/*.svg` now
+  renders the old design and is stale until someone redraws it to match.
+  The login-screen wallpapers (`wallpaper-login*.png`, a variant with the
+  centred CYBER/DEPARTMENT block removed for the SDDM greeter) are
+  unchanged, since no matching login variant of the new artwork exists yet.
 
 ### Removed
 
