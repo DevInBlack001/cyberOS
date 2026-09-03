@@ -169,7 +169,10 @@ setup() {
   mkdir -p "$TMP/bin"
   cat >"$TMP/bin/lsblk" <<'EOF'
 #!/usr/bin/env bash
-printf '%s\n' /dev/sda /dev/sda1 /dev/sda2 /dev/sda3
+case "$*" in
+  *MOUNTPOINT*) exit 0 ;;  # nothing still mounted once umount below has run
+  *) printf '%s\n' /dev/sda /dev/sda1 /dev/sda2 /dev/sda3 ;;
+esac
 EOF
   chmod +x "$TMP/bin/lsblk"
   cat >"$TMP/bin/umount" <<EOF
@@ -200,6 +203,93 @@ EOF
   chmod +x "$TMP/bin/umount"
   PATH="$TMP/bin:$PATH" run unmount_disk /dev/sda
   [ "$status" -eq 0 ]
+}
+
+# Regression: the original unmount_disk swallowed every umount failure with
+# `|| true` and had no way to report one, so a genuinely busy partition (a
+# stale LUKS mapping from a prior encrypted install, say) fell straight
+# through into wipefs/sgdisk -Z anyway -- silently "fixed", still broken.
+
+@test "unmount_disk fails loudly when a partition is still mounted after every unmount attempt" {
+  mkdir -p "$TMP/bin"
+  cat >"$TMP/bin/lsblk" <<'EOF'
+#!/usr/bin/env bash
+case "$*" in
+  *MOUNTPOINT*) printf '%s\n' /mnt ;;
+  *) printf '%s\n' /dev/sda /dev/sda1 ;;
+esac
+EOF
+  chmod +x "$TMP/bin/lsblk"
+  cat >"$TMP/bin/umount" <<'EOF'
+#!/usr/bin/env bash
+exit 32
+EOF
+  chmod +x "$TMP/bin/umount"
+  PATH="$TMP/bin:$PATH" run unmount_disk /dev/sda
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"still has a mounted partition"* ]]
+}
+
+@test "disk_has_mount follows a dm-crypt/LUKS mapper child, not just a raw partition path" {
+  mkdir -p "$TMP/bin"
+  cat >"$TMP/bin/lsblk" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n%s\n%s\n' "" "" "/mnt"
+EOF
+  chmod +x "$TMP/bin/lsblk"
+  PATH="$TMP/bin:$PATH" run disk_has_mount /dev/sda
+  [ "$status" -eq 0 ]
+}
+
+@test "disk_has_mount returns false when nothing under the disk is mounted" {
+  mkdir -p "$TMP/bin"
+  cat >"$TMP/bin/lsblk" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+  chmod +x "$TMP/bin/lsblk"
+  PATH="$TMP/bin:$PATH" run disk_has_mount /dev/sda
+  [ "$status" -ne 0 ]
+}
+
+@test "the pre-partition guard is mapper-aware: disk_has_mount, not a raw /proc/mounts regex" {
+  f="$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-install"
+  grep -q 'disk_has_mount "\$DISK" && die "\$DISK is mounted' "$f"
+  # The old regex only ever matched a raw partition device path, never a
+  # /dev/mapper/<name> mount source stacked on one -- gone from this guard,
+  # though the manual-mode ROOTP/EFIP/HOMEP check a few lines above it is a
+  # separate, still-intentional /proc/mounts read.
+  run grep -Fn '(p?[0-9]| )" /proc/mounts' "$f"
+  [ "$status" -ne 0 ]
+}
+
+@test "erase mode dies if unmount_disk cannot clear every mount, does not press on into wipefs" {
+  f="$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-install"
+  grep -q 'unmount_disk "\$DISK" || die' "$f"
+}
+
+# is_whole_disk: the unattended --disk path had no validation at all before
+# this -- --disk /dev/sda1 by mistake would run wipefs/sgdisk -Z against a
+# partition, not the disk it looks like.
+
+@test "is_whole_disk accepts TYPE=disk, rejects a partition or unresolvable path" {
+  mkdir -p "$TMP/bin"
+  cat >"$TMP/bin/lsblk" <<'EOF'
+#!/usr/bin/env bash
+echo "${LSBLK_TYPE:-}"
+EOF
+  chmod +x "$TMP/bin/lsblk"
+  LSBLK_TYPE=disk PATH="$TMP/bin:$PATH" run is_whole_disk /dev/sda
+  [ "$status" -eq 0 ]
+  LSBLK_TYPE=part PATH="$TMP/bin:$PATH" run is_whole_disk /dev/sda1
+  [ "$status" -ne 0 ]
+  PATH="$TMP/bin:$PATH" run is_whole_disk /dev/does-not-exist
+  [ "$status" -ne 0 ]
+}
+
+@test "unattended validation refuses a --disk that is not a whole disk" {
+  f="$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-install"
+  grep -q 'is_whole_disk "\$DISK" || die' "$f"
 }
 
 @test "erase mode unmounts the target disk before wipefs/sgdisk -Z run" {
