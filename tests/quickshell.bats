@@ -144,18 +144,73 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   awk '/text: cell\.modelData\.name/,/^ *}/' "$f" | grep -q 'textFormat: Text.PlainText'
 }
 
-@test "launcher: categories switch by keyboard (Left/Right, Tab/Backtab), not mouse scroll" {
+@test "launcher: categories switch by keyboard (Left/Right only), not mouse scroll" {
   f="$QS/launcher/Launcher.qml"
   grep -q 'function cycleGroup' "$f"
   grep -qE 'case Qt\.Key_Right:' "$f"
   grep -qE 'case Qt\.Key_Left:' "$f"
   grep -q 'root.cycleGroup(1)' "$f"
   grep -q 'root.cycleGroup(-1)' "$f"
+  # Gated on apps mode -- Left/Right do nothing in files mode, where
+  # there's no category strip to move through.
+  grep -q 'if (root.mode === "apps") { root.cycleGroup(1)' "$f"
+  grep -q 'if (root.mode === "apps") { root.cycleGroup(-1)' "$f"
   # No wheel/drag path -- catList only moves in response to activeGroup,
   # driven by the key handler above.
   ! grep -q 'WheelHandler' "$f"
   grep -qE 'interactive:\s*false' "$f"
   grep -q 'positionViewAtIndex' "$f"
+}
+
+@test "launcher: Tab/Backtab switch apps/files mode, not categories" {
+  f="$QS/launcher/Launcher.qml"
+  grep -q 'property string mode: "apps"' "$f"
+  grep -q 'function setMode' "$f"
+  grep -q 'function toggleMode' "$f"
+  awk '/case Qt\.Key_Tab:/,/break;/' "$f" | grep -q 'root.toggleMode()'
+  awk '/case Qt\.Key_Backtab:/,/break;/' "$f" | grep -q 'root.toggleMode()'
+  # The segmented indicator: both segments present, bracket-highlighted
+  # like the category chips, and clickable via root.setMode.
+  grep -q '"\[Apps\]"' "$f"
+  grep -q '"\[Files\]"' "$f"
+  grep -q 'root.setMode("apps")' "$f"
+  grep -q 'root.setMode("files")' "$f"
+}
+
+@test "launcher: files mode -- fd search is argv-only, fixed-string, bounded, no symlink following" {
+  f="$QS/launcher/Launcher.qml"
+  grep -qE '\["fd", "-i", "-F", "-a", "-t", "f",' "$f"
+  grep -q '"--max-results", "40"' "$f"
+  # -- before the query: a query starting with '-' is never parsed as a flag.
+  grep -qE '"--", q, root\.usrRoot, root\.homeRoot' "$f"
+  grep -q 'usrRoot: "/usr"' "$f"
+  grep -q 'Quickshell.env("HOME")' "$f"
+  # No -L/--follow anywhere in the file -- fd must not traverse a symlink
+  # out of the two search roots.
+  ! grep -qE -- '-L\b|--follow' "$f"
+  # Client-side bound too, independent of --max-results.
+  grep -q '.slice(0, 40)' "$f"
+}
+
+@test "launcher: files mode -- two-char floor, debounced, stale searches can't clobber fresh results" {
+  f="$QS/launcher/Launcher.qml"
+  grep -q 'interval: 150' "$f"
+  grep -q 'fileSearchDebounce.restart()' "$f"
+  grep -q 'q.length < 2' "$f"
+  # Generation guard: each run is tagged, the result handler drops anything
+  # that isn't the current generation.
+  grep -q 'property int searchGen: 0' "$f"
+  grep -q 'property int forGen: -1' "$f"
+  grep -q 'if (fileSearchProc.forGen !== root.searchGen) return;' "$f"
+}
+
+@test "launcher: files mode -- results open via xdg-open, names/paths render as plain text" {
+  f="$QS/launcher/Launcher.qml"
+  grep -q 'Quickshell.execDetached(\["xdg-open", root.fileResults\[index\]\])' "$f"
+  awk '/text: fcell\.baseName/,/^ *}/' "$f" | grep -q 'textFormat: Text.PlainText'
+  awk '/text: fcell\.dirName/,/^ *}/' "$f" | grep -q 'textFormat: Text.PlainText'
+  # A pathological filename elides instead of pushing dirName off the row.
+  grep -q 'Layout.maximumWidth: 180' "$f"
 }
 
 @test "bar: apps chip is the first left module, toggles the launcher" {

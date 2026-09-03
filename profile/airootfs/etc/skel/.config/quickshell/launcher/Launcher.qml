@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import Quickshell.Widgets
 import ".." as Cyber
 
@@ -15,6 +16,15 @@ import ".." as Cyber
 // an app) goes through the `closeRequested` signal, wired in shell.qml
 // where the `launcher` LazyLoader id is in scope (this file's own id
 // namespace can't see it).
+//
+// Tab/Backtab flip `mode` between "apps" (the original launcher) and
+// "files" -- a search-and-open feature over /usr and $HOME, backed by fd
+// (already a shipped package). Directory browsing stays Files.qml's job:
+// this only searches for and opens files (fd's -t f), so a matched
+// directory never comes back and there's no folder-vs-file branch to get
+// wrong. Every fd/xdg-open call here is argv, never a shell string,
+// matching this file's own launch()/execute() and every other Process use
+// in this shell.
 PanelWindow {
     id: root
 
@@ -38,12 +48,100 @@ PanelWindow {
         "Office", "Graphics", "Media", "System", "Utilities"]
     property string activeGroup: "All"
 
-    // Tab/Backtab and Left/Right both drive this -- keyboard-only category
-    // switching, no scrolling required to reach a chip off the edge of the
-    // panel's width. catList (below) keeps the active chip in view itself.
+    // Left/Right drive this -- keyboard-only category switching, no
+    // scrolling required to reach a chip off the edge of the panel's
+    // width. catList (below) keeps the active chip in view itself.
+    // Tab/Backtab used to double as category switching too; they now
+    // switch modes instead (see toggleMode below), so a query typed for
+    // files search can't accidentally jump categories on its way there.
     function cycleGroup(delta) {
         const i = root.groups.indexOf(root.activeGroup);
         root.activeGroup = root.groups[(i + delta + root.groups.length) % root.groups.length];
+    }
+
+    // ---- file search ("files" mode) ----
+    // Tab/Backtab toggle `mode`; Left/Right stay category-only (apps mode
+    // below), so no key means two different things depending on mode.
+    // setMode() also backs the modeTabs segments below (click "Files"
+    // while already in files mode is a no-op, not a bounce back to apps).
+    property string mode: "apps"
+    function setMode(m) {
+        if (root.mode === m) return;
+        root.mode = m;
+        if (root.mode === "files") root.runFileSearch();
+    }
+    function toggleMode() {
+        root.setMode(root.mode === "apps" ? "files" : "apps");
+    }
+
+    readonly property string homeRoot: Quickshell.env("HOME") || "/"
+    readonly property string usrRoot: "/usr"
+    property var fileResults: []
+
+    // Bumped on every search, including the "query too short, clear
+    // results" case in runFileSearch() below, so a slow fd run started by
+    // an earlier keystroke can never overwrite what a faster, more recent
+    // one already returned. fd's own walk of /usr has no upper bound on
+    // how long a no-match query takes (worst case is a full tree walk),
+    // which can outlast the 150ms debounce. fileSearchProc.forGen pins
+    // each run to the generation it was started for; the result handler
+    // drops anything that doesn't match the current one.
+    property int searchGen: 0
+
+    Timer {
+        id: fileSearchDebounce
+        interval: 150
+        onTriggered: root.runFileSearch()
+    }
+
+    // fd -- already a shipped package (dev basics) -- searched by
+    // fixed-string substring (-F), not its default regex mode: a search
+    // box shouldn't turn a stray '.' or '*' into an unintended pattern,
+    // and it rules out regex-complexity blowup on attacker-length input
+    // for free. -i is case-insensitive, matching the app filter. `--`
+    // before the query means a query starting with '-' is still taken
+    // literally, never parsed as a flag. No -L/--follow: fd will not
+    // traverse a symlink out of /usr or $HOME, and can't loop on one.
+    // --max-results bounds fd's own output; .slice() below bounds it
+    // again client-side in case that flag is ever dropped by a future
+    // edit. Bare "fd", not an absolute path: every other Process/
+    // execDetached call in this shell (qalc, xdg-open, wl-copy, 7z,
+    // trash-put) already relies on PATH the same way.
+    Process {
+        id: fileSearchProc
+        property int forGen: -1
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (fileSearchProc.forGen !== root.searchGen) return;
+                const trimmed = text.trim();
+                root.fileResults = trimmed === "" ? [] : trimmed.split("\n").slice(0, 40);
+                fileList.currentIndex = root.fileResults.length > 0 ? 0 : -1;
+            }
+        }
+    }
+
+    // Two-character floor: a one-character query against all of /usr is
+    // both slow (barely narrows the walk) and not useful (thousands of
+    // hits). Below it, results are cleared rather than left stale.
+    function runFileSearch() {
+        if (root.mode !== "files") return;
+        const q = filterField.text.trim();
+        root.searchGen++;
+        if (q.length < 2) { root.fileResults = []; return; }
+        fileSearchProc.forGen = root.searchGen;
+        fileSearchProc.exec(["fd", "-i", "-F", "-a", "-t", "f",
+            "--max-results", "40", "--", q, root.usrRoot, root.homeRoot]);
+    }
+
+    // xdg-open, not Quickshell's own Files.qml directly: this is a file
+    // search (fd's -t f), never a directory, so there is nothing here for
+    // Files.qml to browse into -- the registered per-mimetype handler is
+    // always the right one, the same call Files.qml itself makes to open
+    // a file (see apps/Files.qml's openEntry()).
+    function openFileResult(index) {
+        if (index < 0 || index >= root.fileResults.length) return;
+        Quickshell.execDetached(["xdg-open", root.fileResults[index]]);
+        root.closeRequested();
     }
 
     readonly property var nameOverrides: ({
@@ -127,45 +225,56 @@ PanelWindow {
                 TextField {
                     id: filterField
                     Layout.fillWidth: true
-                    placeholderText: "search applications..."
+                    placeholderText: root.mode === "apps" ? "search applications..." : "search /usr, ~ ..."
                     placeholderTextColor: Cyber.Theme.muted
                     color: Cyber.Theme.fg
                     font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize + 2 }
                     selectByMouse: true
                     background: Rectangle { color: "transparent" }
 
-                    // List navigation and category switching both live on the
-                    // filter field, not on the ListViews themselves: the
-                    // field holds focus for the whole time the launcher is
-                    // open (typing always works) and forwards the keys they
-                    // care about. Left/Right switch categories -- the same
-                    // action as Tab/Backtab -- rather than moving the text
-                    // cursor: a keyboard-only launcher has no scrollbar or
-                    // wheel to reach for, so both the arrow keys and Tab
-                    // reach every category without one.
+                    // Only feeds the file-search debounce: the app list
+                    // filters itself via `filtered`'s own live binding on
+                    // this text, no explicit handler needed there.
+                    onTextChanged: fileSearchDebounce.restart()
+
+                    // List navigation, category switching and mode
+                    // switching all live on the filter field, not on the
+                    // ListViews themselves: the field holds focus for the
+                    // whole time the launcher is open (typing always
+                    // works) and forwards the keys they care about.
+                    // Left/Right switch categories in apps mode rather
+                    // than moving the text cursor -- a keyboard-only
+                    // launcher has no scrollbar or wheel to reach for, so
+                    // the arrow keys alone reach every category. In files
+                    // mode they're left unhandled (event.accepted stays
+                    // false) so the TextField's normal cursor movement
+                    // works instead, since there's no chip strip to move
+                    // through there.
                     Keys.onPressed: event => {
                         switch (event.key) {
+                        case Qt.Key_Tab:
+                        case Qt.Key_Backtab:
+                            root.toggleMode();
+                            event.accepted = true;
+                            break;
                         case Qt.Key_Down:
-                            list.incrementCurrentIndex();
+                            (root.mode === "apps" ? list : fileList).incrementCurrentIndex();
                             event.accepted = true;
                             break;
                         case Qt.Key_Up:
-                            list.decrementCurrentIndex();
+                            (root.mode === "apps" ? list : fileList).decrementCurrentIndex();
                             event.accepted = true;
                             break;
                         case Qt.Key_Right:
-                        case Qt.Key_Tab:
-                            root.cycleGroup(1);
-                            event.accepted = true;
+                            if (root.mode === "apps") { root.cycleGroup(1); event.accepted = true; }
                             break;
                         case Qt.Key_Left:
-                        case Qt.Key_Backtab:
-                            root.cycleGroup(-1);
-                            event.accepted = true;
+                            if (root.mode === "apps") { root.cycleGroup(-1); event.accepted = true; }
                             break;
                         case Qt.Key_Return:
                         case Qt.Key_Enter:
-                            root.launch(root.filtered[list.currentIndex]);
+                            if (root.mode === "apps") root.launch(root.filtered[list.currentIndex]);
+                            else root.openFileResult(fileList.currentIndex);
                             event.accepted = true;
                             break;
                         case Qt.Key_Escape:
@@ -177,17 +286,43 @@ PanelWindow {
                 }
             }
 
+            // Always visible in both modes, unlike catList below (which
+            // only means something in apps mode): the one thing on this
+            // panel that shows *which* search this is, and moves the
+            // instant Tab switches it -- same bracket-highlight language
+            // as the category chips, so the two "this is what's active"
+            // affordances read as one language rather than two.
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Text {
+                    text: root.mode === "apps" ? "[Apps]" : "Apps"
+                    color: root.mode === "apps" ? Cyber.Theme.accent : Cyber.Theme.muted
+                    font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 2 }
+                    MouseArea { anchors.fill: parent; onClicked: root.setMode("apps") }
+                }
+                Text {
+                    text: root.mode === "files" ? "[Files]" : "Files"
+                    color: root.mode === "files" ? Cyber.Theme.accent : Cyber.Theme.muted
+                    font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 2 }
+                    MouseArea { anchors.fill: parent; onClicked: root.setMode("files") }
+                }
+                Item { Layout.fillWidth: true }
+            }
+
             Rectangle { Layout.fillWidth: true; height: 1; color: Cyber.Theme.accent }
 
             // Horizontal ListView, not a RowLayout: nine chips plus brackets
             // on the active one don't fit the panel's narrow width, and a
             // RowLayout has no way to bring an off-screen chip into view.
-            // No wheel/drag handling here on purpose -- Left/Right and
-            // Tab/Backtab (filterField's Keys.onPressed) are the only way to
-            // change category, and positionViewAtIndex below keeps whichever
-            // one is active on-screen, clipped or not.
+            // No wheel/drag handling here on purpose -- Left/Right
+            // (filterField's Keys.onPressed) is the only way to change
+            // category, and positionViewAtIndex below keeps whichever one
+            // is active on-screen, clipped or not.
             ListView {
                 id: catList
+                visible: root.mode === "apps"
                 Layout.fillWidth: true
                 Layout.preferredHeight: Cyber.Theme.fontSize + 8
                 orientation: ListView.Horizontal
@@ -217,8 +352,24 @@ PanelWindow {
                 }
             }
 
+            // Takes catList's row when it's hidden (files mode), so the
+            // panel's height never jumps switching modes: same
+            // Layout.preferredHeight, same font size.
+            Text {
+                visible: root.mode === "files"
+                Layout.fillWidth: true
+                Layout.preferredHeight: Cyber.Theme.fontSize + 8
+                verticalAlignment: Text.AlignVCenter
+                text: filterField.text.trim().length < 2
+                    ? "/usr + ~  ·  type at least 2 characters"
+                    : root.fileResults.length + (root.fileResults.length === 1 ? " match" : " matches") + "  ·  /usr + ~"
+                color: Cyber.Theme.muted
+                font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 3 }
+            }
+
             ListView {
                 id: list
+                visible: root.mode === "apps"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
@@ -294,6 +445,87 @@ PanelWindow {
                         hoverEnabled: true
                         onEntered: list.currentIndex = cell.index
                         onClicked: root.launch(cell.modelData)
+                    }
+                }
+            }
+
+            // Same row shape as `list` above (cursor marker, icon, name),
+            // plus the containing directory in a second, independently
+            // eliding Text -- both PlainText, matching the app row's
+            // hardening: an fd result came from filenames this project
+            // doesn't control, no different from a .desktop Name=.
+            ListView {
+                id: fileList
+                visible: root.mode === "files"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                currentIndex: 0
+
+                model: ScriptModel {
+                    values: root.fileResults
+                    comparisonMode: ObjectComparison.Identity
+                }
+
+                delegate: Item {
+                    id: fcell
+                    required property string modelData
+                    required property int index
+                    width: fileList.width
+                    height: root.rowHeight
+
+                    readonly property string baseName: {
+                        const cut = fcell.modelData.lastIndexOf("/");
+                        return cut >= 0 ? fcell.modelData.substring(cut + 1) : fcell.modelData;
+                    }
+                    readonly property string dirName: {
+                        const cut = fcell.modelData.lastIndexOf("/");
+                        return cut > 0 ? fcell.modelData.substring(0, cut) : "/";
+                    }
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 4
+                        anchors.rightMargin: 4
+                        spacing: 8
+
+                        Text {
+                            text: fcell.index === fileList.currentIndex ? ">" : " "
+                            color: Cyber.Theme.accent
+                            font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize }
+                        }
+                        IconImage {
+                            implicitSize: 16
+                            source: Quickshell.iconPath("text-x-generic", "text-x-generic")
+                        }
+                        Text {
+                            // Capped, not fillWidth: an absurd filename
+                            // elides here instead of squeezing dirName's
+                            // Text out to nothing or overflowing the row.
+                            Layout.maximumWidth: 180
+                            text: fcell.baseName
+                            textFormat: Text.PlainText
+                            color: fcell.index === fileList.currentIndex ? Cyber.Theme.fg : Cyber.Theme.muted
+                            elide: Text.ElideRight
+                            maximumLineCount: 1
+                            font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize }
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            text: fcell.dirName
+                            textFormat: Text.PlainText
+                            color: Cyber.Theme.muted
+                            elide: Text.ElideRight
+                            maximumLineCount: 1
+                            font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 4 }
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onEntered: fileList.currentIndex = fcell.index
+                        onClicked: root.openFileResult(fcell.index)
                     }
                 }
             }
