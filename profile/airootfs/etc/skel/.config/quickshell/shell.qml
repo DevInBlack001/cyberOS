@@ -126,6 +126,17 @@ ShellRoot {
         Notify.NotifyPopups { server: notifServer; dnd: shell.dnd }
     }
 
+    // Always active, not toggled like the popups above: bar/SystemHealthChip.qml
+    // needs a live overallStatus to colour itself even while the panel is
+    // closed, the same reason notifyPopups above is always active. The panel
+    // window itself is invisible until opened (SystemHealth.qml's own
+    // `visible: root.opened`), so there is no idle on-screen cost.
+    LazyLoader {
+        id: systemhealth
+        active: true
+        Popups.SystemHealth {}
+    }
+
     // `qs ipc call notify dnd` -- replaces mako's own notification pipeline;
     // toggles do-not-disturb (see bar/NotifyChip.qml for the bar-side toggle).
     IpcHandler {
@@ -247,6 +258,18 @@ ShellRoot {
                 files.item.visible = true;
             }
         }
+    }
+
+    // `qs ipc call systemhealth toggle` -- bar/SystemHealthChip.qml's own
+    // click handler. `systemhealth` is always `active` (see the LazyLoader
+    // above), so `.item` exists from startup; unlike images/files above
+    // there is no path argument to apply, so plain function calls on the
+    // item are enough.
+    IpcHandler {
+        target: "systemhealth"
+        function open(): void { systemhealth.item?.open(); }
+        function close(): void { systemhealth.item?.close(); }
+        function toggle(): void { systemhealth.item?.toggle(); }
     }
 
     // Keeps Pipewire's default-sink properties valid/subscribed for the OSD

@@ -30,6 +30,11 @@ pciutils
 htop
 btop
 fastfetch
+# CPU temperature for the System Health bar widget (cyberos-systemhealth-state).
+# Without it the widget still works -- temperature just reads "n/a" -- but a
+# health panel with no temperature reading is a degraded one, not an optional
+# extra, on hardware this project already assumes runs hot under lab load.
+lm_sensors
 unzip
 zip
 7zip

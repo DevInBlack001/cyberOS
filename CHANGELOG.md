@@ -32,6 +32,20 @@ own build metadata — not SemVer.
   installed systems, reporting known CVEs in installed packages against
   the pinned channel to the journal (`docs/SPEC.md` S4). Enabled by the
   installer alongside NetworkManager/sddm/bluetooth/cyberos-firstboot.
+- `Super+Shift+U` toggles the touchscreen on/off via `cyberos-toggle-touchscreen`,
+  keybind-only (no bar chip, unlike WiFi/Bluetooth/Mixer): touchscreen hardware
+  is a minority of the lab machines this targets. Uses Hyprland 0.56's
+  `hl.device({name, enabled})` Lua API; survives `hyprctl reload` and a fresh
+  login via a state file `hyprland.lua` reads back on every config load.
+- System Health bar widget: CPU load/temp, memory pressure, battery wear and
+  cycle count, and disk SMART health, all inside the bar (Task-Manager style,
+  no separate window). Ported from `DevInBlack001/omarchy-system-health`
+  onto this shell's own conventions (`Cyber.Theme`, `PanelWindow`,
+  shell.qml-owned `IpcHandler`) rather than that plugin's original
+  environment-specific base classes; the Python data-collection script
+  (`cyberos-systemhealth-state`, no root, no sudoers changes) is vendored
+  close to its original form since it had no such dependency. Adds
+  `lm_sensors` for CPU temperature reporting.
 
 ### Changed
 
