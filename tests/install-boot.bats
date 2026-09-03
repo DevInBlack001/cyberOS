@@ -157,3 +157,56 @@ setup() {
   run grep -n 'bootloader-id=CyberOS --recheck || true' "$f"
   [ "$status" -ne 0 ]
 }
+
+# unmount_disk: a disk carrying a previous CyberOS install (recognizable
+# CYBEROS/CYBEROS_EFI labels) is exactly what this project's own udisks2
+# auto-mount picks up on login. wipefs/sgdisk -Z then fail with a raw kernel
+# I/O error, not a clear message, if the target disk's own partitions are
+# still mounted when erase mode tries to wipe them -- reported from real
+# hardware testing.
+
+@test "unmount_disk calls umount on every partition, never on the disk itself" {
+  mkdir -p "$TMP/bin"
+  cat >"$TMP/bin/lsblk" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' /dev/sda /dev/sda1 /dev/sda2 /dev/sda3
+EOF
+  chmod +x "$TMP/bin/lsblk"
+  cat >"$TMP/bin/umount" <<EOF
+#!/usr/bin/env bash
+echo "\$*" >> "$TMP/umount-calls"
+EOF
+  chmod +x "$TMP/bin/umount"
+  PATH="$TMP/bin:$PATH" run unmount_disk /dev/sda
+  [ "$status" -eq 0 ]
+  [ -f "$TMP/umount-calls" ]
+  ! grep -qx -- '-R /dev/sda' "$TMP/umount-calls"
+  grep -qx -- '-R /dev/sda1' "$TMP/umount-calls"
+  grep -qx -- '-R /dev/sda2' "$TMP/umount-calls"
+  grep -qx -- '-R /dev/sda3' "$TMP/umount-calls"
+}
+
+@test "unmount_disk tolerates lsblk failure and an unmounted (already-idle) partition" {
+  mkdir -p "$TMP/bin"
+  cat >"$TMP/bin/lsblk" <<'EOF'
+#!/usr/bin/env bash
+exit 1
+EOF
+  chmod +x "$TMP/bin/lsblk"
+  cat >"$TMP/bin/umount" <<'EOF'
+#!/usr/bin/env bash
+exit 32
+EOF
+  chmod +x "$TMP/bin/umount"
+  PATH="$TMP/bin:$PATH" run unmount_disk /dev/sda
+  [ "$status" -eq 0 ]
+}
+
+@test "erase mode unmounts the target disk before wipefs/sgdisk -Z run" {
+  f="$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-install"
+  before=$(grep -n 'unmount_disk "\$DISK"' "$f" | head -1 | cut -d: -f1)
+  after=$(grep -n 'wipefs -af "\$DISK"' "$f" | head -1 | cut -d: -f1)
+  [ -n "$before" ]
+  [ -n "$after" ]
+  [ "$before" -lt "$after" ]
+}
