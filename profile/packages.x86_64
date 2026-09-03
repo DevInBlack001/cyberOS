@@ -192,6 +192,8 @@ ttf-liberation
 ttf-dejavu
 papirus-icon-theme
 adwaita-cursors
+kvantum
+qt5ct
 qt6ct
 
 # ---- dev basics (for VS Code / Neovim workflows) ----
