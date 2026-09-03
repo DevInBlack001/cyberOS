@@ -89,6 +89,23 @@ QS="$ROOT/profile/airootfs/etc/skel/.config/quickshell"
   awk '/RowLayout {.*\/\/ left/,/^        }/' "$f" | grep -q 'MusicFlowChip {}'
 }
 
+@test "chip visualizer: PwNodePeakMonitor, not a subprocess, only enabled while actually playing" {
+  f="$QS/bar/MusicFlowChip.qml"
+  grep -q 'import Quickshell.Services.Pipewire' "$f"
+  grep -q 'PwNodePeakMonitor' "$f"
+  grep -q 'node: Pipewire.defaultAudioSink' "$f"
+  grep -q 'enabled: chip.playing' "$f"
+  # No Process, no subprocess of any kind, backing the visualizer -- the
+  # peak value comes entirely from Quickshell's own Pipewire service.
+  ! grep -qE 'Process\s*\{|execDetached.*pw-record|pw-record' "$f"
+}
+
+@test "chip visualizer: bar height is bounded (min/max clamped), never fed straight from peak" {
+  f="$QS/bar/MusicFlowChip.qml"
+  grep -q 'Math.max(bars.minBarHeight' "$f"
+  grep -q 'Math.min(bars.maxBarHeight' "$f"
+}
+
 @test "shell.qml: musicflow is always-active (chip needs live state while closed), IPC target is argument-free" {
   f="$QS/shell.qml"
   awk '/id: musicflow/,/^    }/' "$f" | grep -qE 'active:\s*true'

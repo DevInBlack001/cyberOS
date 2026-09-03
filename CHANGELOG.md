@@ -83,7 +83,11 @@ own build metadata — not SemVer.
   Quickshell's own local `Quickshell.Services.Mpris` D-Bus service, no
   subprocess, no network call, no scraping. Album art only ever displays
   a `file://` URL a player already has on disk; an `http(s)://` one is
-  never handed to `Image`.
+  never handed to `Image`. The chip itself carries a small real
+  audio-reactive equalizer (four bars, driven by Quickshell's own
+  `PwNodePeakMonitor` against the default sink, the same Pipewire service
+  `bar/Audio.qml`/`popups/Mixer.qml` already use), only subscribed while
+  the tracked player is actually playing.
 
 ### Changed
 
