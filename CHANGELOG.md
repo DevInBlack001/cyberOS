@@ -25,6 +25,30 @@ own build metadata — not SemVer.
   (MPRIS track metadata, a window's own title) now render as plain text
   instead of Qt's default auto-detected rich text, closing a markup
   injection into the system bar.
+- `cyberos-install`'s unattended `--disk` path had no validation at all: a
+  typo like `--disk /dev/sda1` instead of `/dev/sda` ran `wipefs`/
+  `sgdisk -Z` against a partition. `is_whole_disk` now rejects anything
+  that is not `lsblk`'s `TYPE=disk`, mirroring a check the interactive
+  wizard already had for its own disk-selection path.
+- `unmount_disk` swallowed every `umount` failure unconditionally and had
+  no way to report one, so a genuinely busy partition (a stale LUKS
+  mapping from a prior encrypted install, say) fell straight through into
+  `wipefs`/`sgdisk -Z` regardless, silently "handled", still broken. It
+  now verifies nothing is left mounted afterward and the installer dies
+  with a clear message instead of proceeding.
+- The pre-partition disk-mounted guard matched only a raw partition device
+  path in `/proc/mounts`, so a previous *encrypted* CyberOS install left
+  unlocked and mounted (source `/dev/mapper/<name>`, never the partition
+  path underneath it) was invisible to it. Replaced with `disk_has_mount`,
+  which follows `lsblk`'s own device-dependency walk and so also covers a
+  mapper device stacked on one of the disk's partitions.
+- The QML file manager's "Extract" ran `7z x` directly against whatever
+  archive was selected, trusting the extractor's own (version-dependent)
+  defenses against a path-traversal entry writing outside the target
+  directory. Archives are exactly the kind of file this project's own
+  users handle routinely (CTF challenges, malware samples, coursework
+  downloads). It now lists the archive first and refuses to extract
+  anything containing a `..` segment or an absolute entry path.
 
 ### Fixed
 

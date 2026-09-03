@@ -99,6 +99,23 @@ QS="$ROOT/profile/airootfs/etc/skel/.config/quickshell"
   [ "$status" -ne 0 ]
 }
 
+@test "files: extract lists the archive first and refuses a zip-slip entry before ever calling 7z x" {
+  f="$QS/apps/Files.qml"
+  # 7z l runs before 7z x, driven from the list process's own completion --
+  # the extract call sits inside listProc's stdout handler, not called
+  # directly from extract().
+  grep -q '"7z", "l", "-slt"' "$f"
+  run grep -F 'function extract(filePath)' "$f"
+  [ "$status" -eq 0 ]
+  ! grep -q 'function extract(filePath) { extractProc' "$f"
+  # Entries are parsed only after the archive's own header block ends --
+  # otherwise the archive's own (always-absolute) external path would be
+  # mistaken for an unsafe internal entry on every single extraction.
+  grep -q '"----------"' "$f"
+  grep -q 'p.startsWith("/")' "$f"
+  grep -q 'p.split("/").includes("..")' "$f"
+}
+
 @test "files: ipc target, desktop entry, and Super+E open it" {
   grep -q 'target: "files"' "$QS/shell.qml"
   d="$ROOT/profile/airootfs/usr/local/share/applications/cyberos-files.desktop"
