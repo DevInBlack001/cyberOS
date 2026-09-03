@@ -26,6 +26,18 @@ own build metadata — not SemVer.
   instead of Qt's default auto-detected rich text, closing a markup
   injection into the system bar.
 
+### Fixed
+
+- `cyberos-install`'s erase mode failed with a raw kernel I/O error partway
+  through partitioning, reported from real hardware testing. Root cause: a
+  disk carrying a previous CyberOS install (recognizable `CYBEROS`/
+  `CYBEROS_EFI` labels) is exactly what this project's own udisks2
+  auto-mount picks up as soon as the live session starts, and the installer
+  never unmounted anything beyond its own `/mnt` and a blanket `swapoff -a`
+  before handing the disk to `wipefs`/`sgdisk -Z`. A still-mounted partition
+  makes both fail. `unmount_disk` now runs before partitioning in every mode
+  (erase, manual, alongside), not just the one that reproduced the bug.
+
 ### Added
 
 - `cyberos-arch-audit.timer`/`.service`: a weekly `arch-audit` run on
