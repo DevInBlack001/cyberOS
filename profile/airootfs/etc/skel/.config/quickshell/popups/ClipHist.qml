@@ -181,6 +181,7 @@ PanelWindow {
                             anchors.rightMargin: 10
                             verticalAlignment: Text.AlignVCenter
                             elide: Text.ElideRight
+                            textFormat: Text.PlainText
                             color: Cyber.Theme.fg
                             font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize }
                             text: row.modelData.preview

@@ -60,6 +60,7 @@ PanelWindow {
         Text {
             Layout.preferredWidth: 96
             text: row.label
+            textFormat: Text.PlainText
             color: Cyber.Theme.fg
             font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 1 }
             elide: Text.ElideRight
@@ -172,6 +173,7 @@ PanelWindow {
                                 Text {
                                     Layout.fillWidth: true
                                     text: root.labelFor(sinkEntry.modelData)
+                                    textFormat: Text.PlainText
                                     color: Cyber.Theme.fg
                                     font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 1 }
                                     elide: Text.ElideRight
