@@ -13,6 +13,22 @@ if not ok or type(theme) ~= "table" then
   theme = { accent = "rgb(00CA4E)", border = "rgb(3A3A3C)" }
 end
 
+---------------------------------------------------------------- touchscreen state
+-- Restores a touchscreen disable across `hyprctl reload` (Super+Shift+R) and
+-- fresh logins. cyberos-toggle-touchscreen (Super+Shift+U) writes the
+-- device's own name here when disabling it; read back as a plain Lua string
+-- value below, never built into code, so there is nothing for it to inject
+-- even if it somehow contained Lua syntax.
+local state_home = os.getenv("XDG_STATE_HOME") or (os.getenv("HOME") .. "/.local/state")
+local touch_state = io.open(state_home .. "/cyberos/touchscreen-disabled-name", "r")
+if touch_state then
+  local name = touch_state:read("*l")
+  touch_state:close()
+  if name and name ~= "" then
+    hl.device({ name = name, enabled = false })
+  end
+end
+
 ---------------------------------------------------------------- monitors
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
 
@@ -123,6 +139,10 @@ hl.bind(mod .. " + Escape", hl.dsp.exec_cmd("hyprlock"))
 hl.bind(mod .. " + SHIFT + E", hl.dsp.exit())
 hl.bind(mod .. " + SHIFT + R", hl.dsp.exec_cmd("hyprctl reload"))
 hl.bind(mod .. " + SHIFT + T", hl.dsp.exec_cmd("cyberos-theme toggle"))
+-- No natural free letter (T is theme); U picked arbitrarily and documented
+-- here, since there is no hardware key for this the way volume/brightness
+-- have XF86 keys.
+hl.bind(mod .. " + SHIFT + U", hl.dsp.exec_cmd("cyberos-toggle-touchscreen"))
 hl.bind(mod .. " + X", hl.dsp.exec_cmd("qs ipc call clip toggle"))
 
 -- screenshots

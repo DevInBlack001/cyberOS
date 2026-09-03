@@ -131,6 +131,11 @@ brightnessctl
 playerctl
 pamixer
 kanshi
+# notify-send (Super+Shift+U touchscreen toggle) posts through the same
+# D-Bus notification pipeline as everything else, landing in the shell's
+# own NotifyPopups bubble instead of a visually inconsistent compositor
+# bezel.
+libnotify
 
 # ---- display manager ----
 sddm

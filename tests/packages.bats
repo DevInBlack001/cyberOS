@@ -34,7 +34,9 @@ pkg_listed() {
   # portal-kde is the FileChooser backend for firefox/code (no window, no
   # KDE app); udisks2 mounts removable media; both are daemons, not apps.
   # fd backs the launcher's files-mode search (tests/quickshell.bats).
-  for p in xdg-desktop-portal-kde udisks2 adwaita-cursors xdg-utils trash-cli 7zip unzip fd; do
+  # libnotify backs cyberos-toggle-touchscreen's notify-send feedback
+  # (tests/touchscreen.bats).
+  for p in xdg-desktop-portal-kde udisks2 adwaita-cursors xdg-utils trash-cli 7zip unzip fd libnotify; do
     pkg_listed "$p"
   done
 }
