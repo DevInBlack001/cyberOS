@@ -156,8 +156,11 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   grep -q 'if (root.mode === "apps") { root.cycleGroup(1)' "$f"
   grep -q 'if (root.mode === "apps") { root.cycleGroup(-1)' "$f"
   # No wheel/drag path -- catList only moves in response to activeGroup,
-  # driven by the key handler above.
-  ! grep -q 'WheelHandler' "$f"
+  # driven by the key handler above. "!"-negated commands are exempt from
+  # errexit regardless of position, so this can't just sit ahead of the
+  # next two assertions -- run + an explicit status check instead.
+  run grep -q 'WheelHandler' "$f"
+  [ "$status" -ne 0 ]
   grep -qE 'interactive:\s*false' "$f"
   grep -q 'positionViewAtIndex' "$f"
 }
@@ -185,9 +188,15 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   grep -qE '"--", q, root\.usrRoot, root\.homeRoot' "$f"
   grep -q 'usrRoot: "/usr"' "$f"
   grep -q 'Quickshell.env("HOME")' "$f"
-  # No -L/--follow anywhere in the file -- fd must not traverse a symlink
-  # out of the two search roots.
-  ! grep -qE -- '-L\b|--follow' "$f"
+  # No -L/--follow outside of comments -- fd must not traverse a symlink out
+  # of the two search roots. Comments stripped first: the explanatory
+  # comment right above this test's own source (and in Launcher.qml itself)
+  # says "No -L/--follow" in prose, which a bare match would misfire on.
+  # "!"-negated commands are exempt from errexit regardless of position, so
+  # this can't just sit ahead of the next assertion -- run + an explicit
+  # status check instead.
+  run bash -c "grep -v '^\s*//' '$f' | grep -qE -- '-L\b|--follow'"
+  [ "$status" -ne 0 ]
   # Client-side bound too, independent of --max-results.
   grep -q '.slice(0, 40)' "$f"
 }

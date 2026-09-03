@@ -30,11 +30,18 @@ SCRIPT="$ROOT/profile/airootfs/usr/local/bin/cyberos-systemhealth-state"
 }
 
 @test "data script: no shell=True, no shell string composition -- subprocess calls are argv lists" {
-  ! grep -qE 'shell\s*=\s*True' "$SCRIPT"
-  ! grep -qE 'os\.system|os\.popen' "$SCRIPT"
+  # A "!"-negated command is exempt from errexit no matter its position, so
+  # only the function's LAST statement actually decides a bats pass/fail --
+  # an earlier failing "! grep" is silently swallowed, not reported. `run` +
+  # an explicit status check is used for all three so each one actually gates.
+  run grep -qE 'shell\s*=\s*True' "$SCRIPT"
+  [ "$status" -ne 0 ]
+  run grep -qE 'os\.system|os\.popen' "$SCRIPT"
+  [ "$status" -ne 0 ]
   # Popen/run always take a Python list literal (argv), never an f-string
   # or %-formatted command line.
-  ! grep -qE 'Popen\(f["'"'"']|run\(f["'"'"']' "$SCRIPT"
+  run grep -qE 'Popen\(f["'"'"']|run\(f["'"'"']' "$SCRIPT"
+  [ "$status" -ne 0 ]
 }
 
 @test "data script: one bad section degrades that section, not the whole payload" {
@@ -54,7 +61,11 @@ SCRIPT="$ROOT/profile/airootfs/usr/local/bin/cyberos-systemhealth-state"
 @test "Model.js is vendored, pure JS (no QML/Quickshell imports), and exports the panel's formatters" {
   f="$QS/popups/SystemHealthModel.js"
   [ -f "$f" ]
-  ! grep -qE '^import ' "$f"
+  # "!"-negated commands are exempt from errexit regardless of position, so
+  # this must not sit ahead of other assertions in the body -- run + an
+  # explicit status check instead of relying on it being last.
+  run grep -qE '^import ' "$f"
+  [ "$status" -ne 0 ]
   grep -q 'function summarize' "$f"
   grep -q 'function cpuStatus' "$f"
   grep -q 'function memoryStatus' "$f"

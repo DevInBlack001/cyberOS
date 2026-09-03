@@ -180,7 +180,11 @@ EOF
   PATH="$TMP/bin:$PATH" run unmount_disk /dev/sda
   [ "$status" -eq 0 ]
   [ -f "$TMP/umount-calls" ]
-  ! grep -qx -- '-R /dev/sda' "$TMP/umount-calls"
+  # "!"-negated commands are exempt from errexit regardless of position, so
+  # this can't just sit ahead of the next three assertions -- run + an
+  # explicit status check instead.
+  run grep -qx -- '-R /dev/sda' "$TMP/umount-calls"
+  [ "$status" -ne 0 ]
   grep -qx -- '-R /dev/sda1' "$TMP/umount-calls"
   grep -qx -- '-R /dev/sda2' "$TMP/umount-calls"
   grep -qx -- '-R /dev/sda3' "$TMP/umount-calls"
