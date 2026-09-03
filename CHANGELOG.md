@@ -67,3 +67,16 @@ own build metadata — not SemVer.
   headless xdg-desktop-portal-kde, purely as the file-dialog backend.
 - Added xdg-utils and trash-cli: the QML file manager opens files through
   xdg-open and deletes through trash-put, never rm.
+
+### Removed
+
+- `kvantum`: an orphan left behind by the Quickshell-only migration above.
+  It styled the KDE app suite that migration removed; nothing else in the
+  image sets a Kvantum style or references it, and the `pixie` SDDM theme
+  (the one remaining Qt greeter) is a self-contained QtQuick theme with no
+  Kvantum dependency, confirmed by its package metadata and QML source.
+- `qt5ct` and its skel config: `QT_QPA_PLATFORMTHEME` is only ever set to
+  `qt6ct`, so Qt5 apps (wireshark-qt is the one left on the ISO) never
+  picked up the qt5ct scheme in the first place: it was configured but
+  never wired in. Qt6 apps keep working exactly as before through qt6ct,
+  which `cyberos-theme` actively toggles on light/dark switches.
