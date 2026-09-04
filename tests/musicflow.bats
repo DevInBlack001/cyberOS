@@ -54,10 +54,28 @@ QS="$ROOT/profile/airootfs/etc/skel/.config/quickshell"
   grep -q 'enabled: !!(root.player && root.player.canGoNext)' "$f"
 }
 
-@test "browser MPRIS entries are excluded (background tabs, not a deliberate source)" {
+@test "idle browser MPRIS entries are excluded (background tabs, not a deliberate source)" {
   f="$QS/popups/MusicFlow.qml"
   grep -q 'readonly property var browsers: \["firefox", "chromium", "brave"\]' "$f"
-  grep -q 'candidates: Mpris.players.values.filter(p => !isBrowser(p))' "$f"
+  grep -q 'candidates: Mpris.players.values.filter(p => !isBrowser(p) || p.isPlaying)' "$f"
+}
+
+@test "a browser tab actively playing audio overrides the browser exclusion" {
+  f="$QS/popups/MusicFlow.qml"
+  # The exclusion is scoped to idle entries (|| p.isPlaying), not a blanket
+  # ban on browsers: a tab genuinely producing audio right now is real
+  # output a student expects to see, not the stale/flickering background
+  # tab the exclusion exists to hide.
+  grep -q '!isBrowser(p) || p.isPlaying' "$f"
+}
+
+@test "browser exclusion carries its own rationale, so it isn't mistaken for a bug later" {
+  f="$QS/popups/MusicFlow.qml"
+  # Guards the explanatory comment above the browsers array, not just the
+  # filter itself: without it, "why doesn't Music Flow show a YouTube tab
+  # playing in Firefox" reads as a missed integration rather than the
+  # deliberate, inherited-from-Media.qml choice it actually is.
+  grep -qi "not a deliberate" "$f"
 }
 
 @test "source selection sticks to a stable bus name, not an index that could point at a different player" {

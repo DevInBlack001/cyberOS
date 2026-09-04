@@ -117,7 +117,10 @@ own build metadata — not SemVer.
   audio-reactive equalizer (four bars, driven by Quickshell's own
   `PwNodePeakMonitor` against the default sink, the same Pipewire service
   `bar/Audio.qml`/`popups/Mixer.qml` already use), only subscribed while
-  the tracked player is actually playing.
+  the tracked player is actually playing. A browser (Firefox/Chromium/
+  Brave) MPRIS entry is excluded only while idle, the same flicker-prone
+  background-tab noise `bar/Media.qml` already ignored; a tab actively
+  playing audio right now still shows up as a source.
 
 ### Changed
 

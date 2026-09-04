@@ -38,12 +38,15 @@ PanelWindow {
     function close() { root.opened = false; }
     function toggle() { root.opened ? root.close() : root.open(); }
 
-    // Browser MPRIS entries are usually a background tab, not a deliberate
-    // "now playing" source, and can flicker in and out as tabs open/close --
-    // same exclusion bar/Media.qml (this file's predecessor) already used.
+    // A browser MPRIS entry that is not currently playing is usually just a
+    // background tab, not a deliberate "now playing" source, and can flicker
+    // in and out as tabs open/close -- same exclusion bar/Media.qml (this
+    // file's predecessor) used, now scoped to idle entries only: a browser
+    // tab actively producing audio right now is exactly the kind of source
+    // a student expects to see here, so playing overrides the exclusion.
     readonly property var browsers: ["firefox", "chromium", "brave"]
     function isBrowser(p) { return browsers.some(b => (p.desktopEntry ?? "").includes(b)); }
-    readonly property var candidates: Mpris.players.values.filter(p => !isBrowser(p))
+    readonly property var candidates: Mpris.players.values.filter(p => !isBrowser(p) || p.isPlaying)
 
     // Sticks to the user's explicit choice (by bus name, stable for a
     // player's lifetime) until that player disappears, then falls back to
