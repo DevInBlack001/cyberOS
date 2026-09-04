@@ -32,6 +32,14 @@ end
 ---------------------------------------------------------------- monitors
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
 
+-- cyberos-monitor-arrange (the Arrange bar chip) persists placement/refresh
+-- rate choices in a marked block at the end of this file, applied after the
+-- catch-all rule above so a per-monitor rule wins. Same guarded-dofile shape
+-- as theme.lua above: pcall so a machine that has never used the panel (no
+-- monitors.lua yet) degrades to the automatic layout above instead of
+-- tripping Hyprland's emergency mode.
+pcall(dofile, cfgdir .. "/monitors.lua")
+
 ---------------------------------------------------------------- programs
 local terminal = "foot"
 local browser  = "firefox"

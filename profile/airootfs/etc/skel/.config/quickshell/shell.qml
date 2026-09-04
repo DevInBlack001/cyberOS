@@ -147,6 +147,15 @@ ShellRoot {
         Popups.MusicFlow {}
     }
 
+    // Always active for the same reason as systemhealth/musicflow above:
+    // bar/MonitorChip.qml needs a live "any external display connected"
+    // count to colour itself even while the panel is closed.
+    LazyLoader {
+        id: monitorArrange
+        active: true
+        Popups.MonitorArrange {}
+    }
+
     // `qs ipc call notify dnd` -- replaces mako's own notification pipeline;
     // toggles do-not-disturb (see bar/NotifyChip.qml for the bar-side toggle).
     IpcHandler {
@@ -289,6 +298,15 @@ ShellRoot {
         function open(): void { musicflow.item?.open(); }
         function close(): void { musicflow.item?.close(); }
         function toggle(): void { musicflow.item?.toggle(); }
+    }
+
+    // `qs ipc call monitorarrange toggle` -- bar/MonitorChip.qml's own click
+    // handler, same shape as musicflow/systemhealth above.
+    IpcHandler {
+        target: "monitorarrange"
+        function open(): void { monitorArrange.item?.open(); }
+        function close(): void { monitorArrange.item?.close(); }
+        function toggle(): void { monitorArrange.item?.toggle(); }
     }
 
     // Keeps Pipewire's default-sink properties valid/subscribed for the OSD

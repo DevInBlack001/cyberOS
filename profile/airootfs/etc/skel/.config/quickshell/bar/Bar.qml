@@ -38,6 +38,7 @@ PanelWindow {
             Audio {}
             Network {}
             Battery {}
+            MonitorChip {}
             SystemHealthChip {}
             NotifyChip {}
             BarModule { icon: "\uf011"; onClicked: powerMenu.activeAsync = true }

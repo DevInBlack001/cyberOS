@@ -78,6 +78,29 @@ own build metadata — not SemVer.
 
 ### Added
 
+- Monitor Arrange: a bar chip + popup to place an external monitor left,
+  right, above, or below the internal display and set each monitor's
+  refresh rate, on by default. Ported from
+  github.com/edbron/omarchy-monitor-placement-refresh-rate's UX, not its
+  QML: that plugin's `Panel.qml` is built on Omarchy's own component
+  framework and a multi-section keyboard-cursor system this shell doesn't
+  have, so the popup is a fresh `Cyber.Theme`/`PanelWindow` implementation
+  (mouse + Escape, matching every other popup here) rather than a literal
+  port. The actual logic -- reading `hyprctl`, computing placement,
+  persisting to a marked block in `~/.config/hypr/monitors.lua`
+  (`hyprland.lua` now `dofile`s it back in, guarded like `theme.lua`) --
+  is vendored as `cyberos-monitor-arrange`, unchanged except for one
+  hardening fix: a monitor's `description` (from the display's own EDID,
+  not this project's data) is rejected outright, not merely escaped, if it
+  contains a control character, since it goes into a Hyprland Lua string
+  literal (`output = "desc:<description>"`) and an unescaped newline could
+  break out of that literal into arbitrary Lua (`hyprctl eval` is a real
+  code-execution surface -- see hyprland.lua's own `hl.dsp.exec_cmd`
+  keybinds). Verified against a live Hyprland session on the dev host
+  (`state`/`rate --dry-run`) and, separately, that a crafted description
+  attempting exactly that injection is rejected before it ever reaches
+  `hyprctl eval`. No new packages: only `hyprctl` and `jq`, both already
+  shipped.
 - Every popup (bar plugins and the launcher/power menu alike) now closes on
   a click outside it, not just Escape. One shared mechanism
   (`ClickOutside.qml`, a `qmldir`-registered `MouseArea` that sits behind
