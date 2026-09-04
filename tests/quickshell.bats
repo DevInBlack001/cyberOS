@@ -97,8 +97,45 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   grep -q 'hibernateOk: root.swapKb > 0 && root.swapKb >= root.memKb' "$f"
   grep -qE 'systemctl.*hibernate' "$f"
   grep -q 'root.hibernateOk' "$f"
-  implicit=$(grep -c 'implicitHeight: 20 + root.actions.length \* 50' "$f")
+  implicit=$(grep -c 'height: 20 + root.actions.length \* 50' "$f")
   [ "$implicit" -eq 1 ]   # row count drives panel height, not a fixed constant
+}
+
+@test "click-outside-to-close: every popup uses Cyber.ClickOutside behind a self-contained content box" {
+  # One shared mechanism (ClickOutside.qml, quickshell root, registered in
+  # qmldir) instead of N copies of the same background MouseArea and the
+  # same "does the content box eat its own clicks" reasoning duplicated
+  # across every popup.
+  grep -q 'ClickOutside ClickOutside.qml' "$QS/qmldir"
+  grep -q 'signal outsideClicked()' "$QS/ClickOutside.qml"
+
+  for f in "$QS/popups/BluetoothPanel.qml" "$QS/popups/WifiPanel.qml" \
+           "$QS/popups/Mixer.qml" "$QS/popups/PowerPanel.qml" \
+           "$QS/popups/MusicFlow.qml" "$QS/popups/SystemHealth.qml" \
+           "$QS/popups/Calc.qml" "$QS/popups/ClipHist.qml" \
+           "$QS/popups/EmojiPicker.qml" "$QS/popups/WinSwitch.qml" \
+           "$QS/power/PowerMenu.qml" "$QS/launcher/Launcher.qml"; do
+    grep -q 'Cyber.ClickOutside {' "$f"
+    grep -q 'onOutsideClicked: root.close' "$f"   # closeRequested() or close()
+    # Content box swallows its own clicks -- without this a click on blank
+    # space inside the popup would fall through to ClickOutside behind it
+    # and close the popup it landed inside.
+    grep -q 'MouseArea { anchors.fill: parent }' "$f"
+    # The content box is explicitly sized/positioned now, not `anchors.fill:
+    # parent` against a window that (for most of these) is fullscreen --
+    # that would silently expand the visible popup to cover the whole screen.
+    grep -qE '^\s+(width: [0-9]+|height: [0-9]+|height: 20 \+ root\.actions\.length)' "$f"
+  done
+}
+
+@test "click-outside-to-close: MusicFlow and SystemHealth stay small (not fullscreen) while closed" {
+  # Both are always-loaded (LazyLoader active: true, never destroyed) --
+  # unlike every other popup here, they cannot simply be fullscreen
+  # unconditionally, or a "closed" panel would sit over the whole desktop
+  # as an invisible click-blocker forever. right/bottom (or left/bottom)
+  # only join top/left (or top/right) once root.opened is true.
+  grep -q 'anchors { top: true; left: true; right: root.opened; bottom: root.opened }' "$QS/popups/MusicFlow.qml"
+  grep -q 'anchors { top: true; right: true; left: root.opened; bottom: root.opened }' "$QS/popups/SystemHealth.qml"
 }
 
 @test "osd handles the five ipc functions and swayosd is gone" {

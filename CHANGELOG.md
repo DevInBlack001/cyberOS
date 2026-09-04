@@ -78,6 +78,20 @@ own build metadata — not SemVer.
 
 ### Added
 
+- Every popup (bar plugins and the launcher/power menu alike) now closes on
+  a click outside it, not just Escape. One shared mechanism
+  (`ClickOutside.qml`, a `qmldir`-registered `MouseArea` that sits behind
+  each popup's content and fires `outsideClicked()`) instead of a
+  background-catcher-plus-content-swallower duplicated across all twelve
+  popups. Each popup's window now spans the whole output (was previously
+  sized to just the popup) so there is a real "outside" region to click;
+  its own content box positions and sizes itself the way the window used
+  to. `MusicFlow` and `SystemHealth` are the two always-loaded popups
+  (their LazyLoaders never destroy them, only toggle `visible`) --
+  spanning the whole output unconditionally would have made a "closed"
+  panel an invisible, permanent click-blocker over the whole desktop, so
+  their extra edges only join in while `opened` is true; closed, they are
+  byte-for-byte the same small corner window they always were.
 - Launcher file search (`launcher/Launcher.qml`, Tab from app mode) now
   also covers `/etc`, `/var`, and hidden directories under `$HOME`
   (`~/.config` included; fd skips dotdirs by default, so it was never

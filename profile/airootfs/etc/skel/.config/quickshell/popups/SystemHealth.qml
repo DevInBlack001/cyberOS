@@ -22,8 +22,15 @@ import "SystemHealthModel.js" as Model
 PanelWindow {
     id: root
 
-    anchors { top: true; right: true }
-    margins { top: 44; right: 8 }
+    // top/right stay permanently anchored (matches every closed-state
+    // geometry this window has always had); left/bottom only join in
+    // while actually open, so Cyber.ClickOutside gets a real "outside"
+    // region to catch a click in without this always-loaded window (see
+    // the file header: `active: true` in shell.qml, never destroyed)
+    // turning into a permanent, invisible full-desktop click-blocker while
+    // closed. When closed this is byte-for-byte the same small corner
+    // window it always was.
+    anchors { top: true; right: true; left: root.opened; bottom: root.opened }
     implicitWidth: 380
     implicitHeight: 560
     color: "transparent"
@@ -35,6 +42,8 @@ PanelWindow {
     function open() { root.opened = true; root.refresh(); }
     function close() { root.opened = false; }
     function toggle() { root.opened ? root.close() : root.open(); }
+
+    Cyber.ClickOutside { onOutsideClicked: root.close() }
 
     property var payload: null
     property bool loadFailed: false
@@ -173,7 +182,9 @@ PanelWindow {
     }
 
     Rectangle {
-        anchors.fill: parent
+        anchors { top: parent.top; right: parent.right; topMargin: 44; rightMargin: 8 }
+        width: 380
+        height: 560
         radius: Cyber.Theme.radius
         color: Cyber.Theme.bg
         border.width: 1
@@ -181,6 +192,12 @@ PanelWindow {
 
         focus: true
         Keys.onEscapePressed: root.close()
+
+        // Swallows a click on blank space inside the popup: a plain
+        // Rectangle doesn't itself accept mouse events, so without this a
+        // click here would fall through to Cyber.ClickOutside behind the
+        // whole window and close the popup it landed inside.
+        MouseArea { anchors.fill: parent }
 
         ColumnLayout {
             anchors { fill: parent; margins: 12 }

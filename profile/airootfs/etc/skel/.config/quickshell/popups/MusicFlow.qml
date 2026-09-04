@@ -24,8 +24,15 @@ import ".." as Cyber
 PanelWindow {
     id: root
 
-    anchors { top: true; left: true }
-    margins { top: 44; left: 8 }
+    // top/left stay permanently anchored (matches every closed-state
+    // geometry this window has always had); right/bottom only join in
+    // while actually open, so Cyber.ClickOutside gets a real "outside"
+    // region to catch a click in without this always-loaded window (see
+    // the file header: `active: true` in shell.qml, never destroyed)
+    // turning into a permanent, invisible full-desktop click-blocker while
+    // closed. When closed this is byte-for-byte the same small corner
+    // window it always was.
+    anchors { top: true; left: true; right: root.opened; bottom: root.opened }
     implicitWidth: 340
     implicitHeight: 280
     color: "transparent"
@@ -37,6 +44,8 @@ PanelWindow {
     function open() { root.opened = true; }
     function close() { root.opened = false; }
     function toggle() { root.opened ? root.close() : root.open(); }
+
+    Cyber.ClickOutside { onOutsideClicked: root.close() }
 
     // A browser MPRIS entry that is not currently playing is usually just a
     // background tab, not a deliberate "now playing" source, and can flicker
@@ -67,7 +76,9 @@ PanelWindow {
         !!(root.player && root.player.trackArtUrl && root.player.trackArtUrl.startsWith("file://"))
 
     Rectangle {
-        anchors.fill: parent
+        anchors { top: parent.top; left: parent.left; topMargin: 44; leftMargin: 8 }
+        width: 340
+        height: 280
         radius: Cyber.Theme.radius
         color: Cyber.Theme.bg
         border.width: 1
@@ -75,6 +86,12 @@ PanelWindow {
 
         focus: true
         Keys.onEscapePressed: root.close()
+
+        // Swallows a click on blank space inside the popup: a plain
+        // Rectangle doesn't itself accept mouse events, so without this a
+        // click here would fall through to Cyber.ClickOutside behind the
+        // whole window and close the popup it landed inside.
+        MouseArea { anchors.fill: parent }
 
         ColumnLayout {
             anchors { fill: parent; margins: 12 }
