@@ -78,6 +78,16 @@ own build metadata — not SemVer.
 
 ### Added
 
+- Launcher file search (`launcher/Launcher.qml`, Tab from app mode) now
+  also covers `/etc`, `/var`, and hidden directories under `$HOME`
+  (`~/.config` included; fd skips dotdirs by default, so it was never
+  actually reached before despite `$HOME` already being a search root).
+  Same `fd` invocation, still fixed-string, argv-only, no symlink
+  following, and bounded (`--max-results 40` plus a client-side
+  `.slice`); an unreadable subtree under `/etc` or `/var`
+  (`/etc/shadow`, `/etc/sudoers.d`, ...) is skipped by `fd` itself the
+  same way a directory that doesn't exist is, and a search returning no
+  results is already the right UI for either case.
 - Power menu: Sleep (`systemctl suspend`) always offered; Hibernate
   (`systemctl hibernate`) offered only when live `/proc/meminfo` shows
   swap at least as large as RAM, checked at every open rather than

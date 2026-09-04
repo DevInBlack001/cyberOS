@@ -196,16 +196,17 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
 
 @test "launcher: files mode -- fd search is argv-only, fixed-string, bounded, no symlink following" {
   f="$QS/launcher/Launcher.qml"
-  grep -qE '\["fd", "-i", "-F", "-a", "-t", "f",' "$f"
+  grep -qE '\["fd", "-i", "-F", "-H", "-a", "-t", "f",' "$f"
   grep -q '"--max-results", "40"' "$f"
   # -- before the query: a query starting with '-' is never parsed as a flag.
-  grep -qE '"--", q, root\.usrRoot, root\.homeRoot' "$f"
+  grep -qE '"--", q,' "$f"
+  grep -qE 'root\.usrRoot, root\.etcRoot, root\.varRoot, root\.homeRoot' "$f"
   grep -q 'usrRoot: "/usr"' "$f"
   grep -q 'Quickshell.env("HOME")' "$f"
   # No -L/--follow outside of comments -- fd must not traverse a symlink out
-  # of the two search roots. Comments stripped first: the explanatory
-  # comment right above this test's own source (and in Launcher.qml itself)
-  # says "No -L/--follow" in prose, which a bare match would misfire on.
+  # of any search root. Comments stripped first: the explanatory comment
+  # right above this test's own source (and in Launcher.qml itself) says
+  # "No -L/--follow" in prose, which a bare match would misfire on.
   # "!"-negated commands are exempt from errexit regardless of position, so
   # this can't just sit ahead of the next assertion -- run + an explicit
   # status check instead.
@@ -213,6 +214,15 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   [ "$status" -ne 0 ]
   # Client-side bound too, independent of --max-results.
   grep -q '.slice(0, 40)' "$f"
+}
+
+@test "launcher: files mode -- scope covers /etc, /var, and hidden dirs under \$HOME (~/.config)" {
+  f="$QS/launcher/Launcher.qml"
+  grep -q 'etcRoot: "/etc"' "$f"
+  grep -q 'varRoot: "/var"' "$f"
+  # -H is what actually reaches ~/.config: fd skips dotdirs without it.
+  grep -qE '\["fd", "-i", "-F", "-H",' "$f"
+  grep -q '/usr, /etc, /var, ~' "$f"
 }
 
 @test "launcher: files mode -- two-char floor, debounced, stale searches can't clobber fresh results" {

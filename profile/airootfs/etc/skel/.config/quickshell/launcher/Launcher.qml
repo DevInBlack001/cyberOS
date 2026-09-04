@@ -18,8 +18,9 @@ import ".." as Cyber
 // namespace can't see it).
 //
 // Tab/Backtab flip `mode` between "apps" (the original launcher) and
-// "files" -- a search-and-open feature over /usr and $HOME, backed by fd
-// (already a shipped package). Directory browsing stays Files.qml's job:
+// "files" -- a search-and-open feature over /usr, /etc, /var and $HOME
+// (including dotdirs like ~/.config), backed by fd (already a shipped
+// package). Directory browsing stays Files.qml's job:
 // this only searches for and opens files (fd's -t f), so a matched
 // directory never comes back and there's no folder-vs-file branch to get
 // wrong. Every fd/xdg-open call here is argv, never a shell string,
@@ -76,6 +77,8 @@ PanelWindow {
 
     readonly property string homeRoot: Quickshell.env("HOME") || "/"
     readonly property string usrRoot: "/usr"
+    readonly property string etcRoot: "/etc"
+    readonly property string varRoot: "/var"
     property var fileResults: []
 
     // Bumped on every search, including the "query too short, clear
@@ -101,12 +104,24 @@ PanelWindow {
     // for free. -i is case-insensitive, matching the app filter. `--`
     // before the query means a query starting with '-' is still taken
     // literally, never parsed as a flag. No -L/--follow: fd will not
-    // traverse a symlink out of /usr or $HOME, and can't loop on one.
-    // --max-results bounds fd's own output; .slice() below bounds it
-    // again client-side in case that flag is ever dropped by a future
-    // edit. Bare "fd", not an absolute path: every other Process/
+    // traverse a symlink out of /usr, /etc, /var or $HOME, and can't loop
+    // on one. -H/--hidden is what actually makes ~/.config reachable:
+    // fd skips dotdirs by default, so without it $HOME was searched in
+    // name only. --max-results bounds fd's own output; .slice() below
+    // bounds it again client-side in case that flag is ever dropped by a
+    // future edit. Bare "fd", not an absolute path: every other Process/
     // execDetached call in this shell (qalc, xdg-open, wl-copy, 7z,
     // trash-put) already relies on PATH the same way.
+    //
+    // /etc and /var carry permission-restricted subtrees this project's
+    // own student user can't read (/etc/shadow, /etc/sudoers.d,
+    // /var/lib/*): confirmed fd's own behaviour handles that the same way
+    // as any other search tool, not a gap this shell needs to paper over
+    // -- it skips an unreadable subdirectory and keeps walking the rest,
+    // exit 0, no results from that branch. A search returning nothing is
+    // already the correct, expected UI for "not present" and "present but
+    // blocked" alike; there is no per-directory status surface here for
+    // the two to diverge on.
     Process {
         id: fileSearchProc
         property int forGen: -1
@@ -129,8 +144,9 @@ PanelWindow {
         root.searchGen++;
         if (q.length < 2) { root.fileResults = []; return; }
         fileSearchProc.forGen = root.searchGen;
-        fileSearchProc.exec(["fd", "-i", "-F", "-a", "-t", "f",
-            "--max-results", "40", "--", q, root.usrRoot, root.homeRoot]);
+        fileSearchProc.exec(["fd", "-i", "-F", "-H", "-a", "-t", "f",
+            "--max-results", "40", "--", q,
+            root.usrRoot, root.etcRoot, root.varRoot, root.homeRoot]);
     }
 
     // xdg-open, not Quickshell's own Files.qml directly: this is a file
@@ -225,7 +241,7 @@ PanelWindow {
                 TextField {
                     id: filterField
                     Layout.fillWidth: true
-                    placeholderText: root.mode === "apps" ? "search applications..." : "search /usr, ~ ..."
+                    placeholderText: root.mode === "apps" ? "search applications..." : "search /usr, /etc, /var, ~ ..."
                     placeholderTextColor: Cyber.Theme.muted
                     color: Cyber.Theme.fg
                     font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize + 2 }
