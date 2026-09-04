@@ -185,6 +185,25 @@ xdg-utils
 # file manager must never rm a student's work.
 trash-cli
 
+# ---- cloud drives ----
+# Connect iCloud/Google Drive/OneDrive as folders under ~/Cloud (bar chip +
+# popups/CloudDrives.qml, backed by cyberos-cloud-drives). All base packages
+# rather than a runtime install -- consistent with lm_sensors above, and
+# this project's own machines are not guaranteed a network connection at
+# first login the way Omarchy's own omarchy-pkg-add lazy-install assumes.
+rclone
+fuse3
+gum
+libsecret
+# The config-encryption password and (for iCloud) the Apple ID password
+# live only here, never on disk in the clear -- see cyberos-cloud-drives'
+# own header comment. Started at session autostart (hyprland.lua), not
+# PAM-unlocked at login: this project's own lab-machine threat model
+# (shared machines, no single-owner laptop-theft scenario) doesn't carry
+# PAM's added complexity/blast-radius for a marginal benefit against a
+# threat that mostly doesn't apply here.
+gnome-keyring
+
 # ---- virtualization ----
 virtualbox
 virtualbox-host-dkms

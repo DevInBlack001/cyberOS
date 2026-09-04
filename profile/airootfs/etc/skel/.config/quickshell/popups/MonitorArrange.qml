@@ -113,40 +113,6 @@ PanelWindow {
         }
     }
 
-    // One row per direction or per rate: a small pill, highlighted when
-    // active, disabled while an action is in flight. Shared by the
-    // placement grid and every refresh-rate row below.
-    component Pill: Rectangle {
-        id: pill
-        required property string label
-        property bool active: false
-        signal activated()
-
-        implicitWidth: pillText.implicitWidth + 20
-        implicitHeight: 28
-        radius: Cyber.Theme.radius / 2
-        color: pill.active ? Cyber.Theme.sel
-             : pillMouse.containsMouse ? Cyber.Theme.surface : "transparent"
-        border.width: 1
-        border.color: pill.active ? Cyber.Theme.accent : Cyber.Theme.border
-        opacity: root.busy ? 0.5 : 1
-
-        Text {
-            id: pillText
-            anchors.centerIn: parent
-            text: pill.label
-            color: pill.active ? Cyber.Theme.accent : Cyber.Theme.fg
-            font { family: Cyber.Theme.fontFamily; pixelSize: Cyber.Theme.fontSize - 2 }
-        }
-        MouseArea {
-            id: pillMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            enabled: !root.busy
-            onClicked: pill.activated()
-        }
-    }
-
     Rectangle {
         anchors { top: parent.top; right: parent.right; topMargin: 44; rightMargin: 8 }
         width: 360
@@ -244,10 +210,11 @@ PanelWindow {
                     spacing: 6
                     Repeater {
                         model: root.directions
-                        delegate: Pill {
+                        delegate: Cyber.Pill {
                             required property string modelData
                             label: root.directionLabels[modelData]
                             active: !!(root.target && root.target.placement === modelData)
+                            busy: root.busy
                             onActivated: root.arrange(modelData)
                         }
                     }
@@ -295,10 +262,11 @@ PanelWindow {
                                 spacing: 6
                                 Repeater {
                                     model: rateRow.modelData.rates || []
-                                    delegate: Pill {
+                                    delegate: Cyber.Pill {
                                         required property var modelData
                                         label: modelData + " Hz"
                                         active: modelData === rateRow.modelData.refreshRate
+                                        busy: root.busy
                                         onActivated: root.setRate(rateRow.modelData.name, modelData)
                                     }
                                 }

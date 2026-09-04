@@ -2,3 +2,4 @@ singleton Theme Theme.qml
 singleton OsdState OsdState.qml
 DesktopClock DesktopClock.qml
 ClickOutside ClickOutside.qml
+Pill Pill.qml

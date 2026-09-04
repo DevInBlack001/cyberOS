@@ -38,4 +38,5 @@ file_permissions=(
   ["/usr/local/bin/cyberos-systemhealth-state"]="0:0:755"
   ["/usr/local/bin/cyberos-toggle-touchscreen"]="0:0:755"
   ["/usr/local/bin/cyberos-monitor-arrange"]="0:0:755"
+  ["/usr/local/bin/cyberos-cloud-drives"]="0:0:755"
 )

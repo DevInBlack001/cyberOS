@@ -156,6 +156,15 @@ ShellRoot {
         Popups.MonitorArrange {}
     }
 
+    // Always active for the same reason as monitorArrange/systemhealth
+    // above: bar/CloudDrivesChip.qml needs a live "any drive mounted"
+    // count to colour itself even while the panel is closed.
+    LazyLoader {
+        id: cloudDrives
+        active: true
+        Popups.CloudDrives {}
+    }
+
     // `qs ipc call notify dnd` -- replaces mako's own notification pipeline;
     // toggles do-not-disturb (see bar/NotifyChip.qml for the bar-side toggle).
     IpcHandler {
@@ -307,6 +316,15 @@ ShellRoot {
         function open(): void { monitorArrange.item?.open(); }
         function close(): void { monitorArrange.item?.close(); }
         function toggle(): void { monitorArrange.item?.toggle(); }
+    }
+
+    // `qs ipc call clouddrives toggle` -- bar/CloudDrivesChip.qml's own
+    // click handler, same shape as monitorarrange/musicflow above.
+    IpcHandler {
+        target: "clouddrives"
+        function open(): void { cloudDrives.item?.open(); }
+        function close(): void { cloudDrives.item?.close(); }
+        function toggle(): void { cloudDrives.item?.toggle(); }
     }
 
     // Keeps Pipewire's default-sink properties valid/subscribed for the OSD

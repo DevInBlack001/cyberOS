@@ -78,6 +78,37 @@ own build metadata — not SemVer.
 
 ### Added
 
+- Cloud Drives: a bar chip + popup to connect Google Drive, OneDrive, and
+  iCloud Drive as folders under `~/Cloud`, on by default. UX ported from
+  github.com/edbron/omarchy-cloud-drives; its QML is not, for the same
+  reason as Monitor Arrange below (built on Omarchy's own component
+  framework and keyboard-cursor system). The backend
+  (`cyberos-cloud-drives`) is functionally unchanged from upstream, already
+  reviewed and found sound (rename(2)-atomic symlink-safe writes,
+  keyring-only secret storage, the iCloud password sent over a private
+  unix socket -- rclone's rc API -- rather than argv), aside from three
+  Omarchy-specific dependencies this project doesn't have: `omarchy-pkg-add`
+  (rclone/fuse3/gum/libsecret/gnome-keyring are base packages here instead
+  of lazy-installed), `uwsm-app` (replaced with plain `xdg-open`, same as
+  every other file-open in this shell), and
+  `omarchy-launch-floating-terminal-with-presentation` (replaced with this
+  project's own `foot --app-id=` pattern, already used by
+  `cyberos-install-gui`, plus a matching `float-cloud-drives` window_rule
+  in `hyprland.lua`).
+  Secret storage is `gnome-keyring`, autostarted at session start
+  (`--components=secrets` only): the config-encryption password lives only
+  there, never on disk in the clear. Considered KWallet as a non-GNOME
+  alternative first; its secret-service compat daemon does correctly claim
+  the right D-Bus name (verified live, in isolation), but a fresh wallet's
+  non-interactive creation hung in testing, likely on a one-time setup
+  prompt with no clear headless path -- gnome-keyring's own non-interactive
+  auto-create-and-unlock was verified working live on the dev host and is
+  the same mechanism Omarchy itself already relies on. gnome-keyring here
+  is the package alone (no PAM auto-unlock, no GTK/GNOME-shell pull-in),
+  not the GNOME desktop this project already removed elsewhere.
+  `MonitorArrange.qml`'s inline `Pill` button component moved to a shared
+  root-level `Pill.qml` (`qmldir`-registered like `ClickOutside.qml`) so
+  Cloud Drives' own per-provider action buttons don't duplicate it.
 - Monitor Arrange: a bar chip + popup to place an external monitor left,
   right, above, or below the internal display and set each monitor's
   refresh rate, on by default. Ported from
