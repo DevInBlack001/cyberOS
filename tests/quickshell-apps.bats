@@ -137,6 +137,22 @@ QS="$ROOT/profile/airootfs/etc/skel/.config/quickshell"
   done
 }
 
+# General form of the check above, driven by git's own tracked mode rather
+# than a hand-maintained list: every script committed 755 under
+# usr/local/bin must have a matching profiledef.sh entry, or mkarchiso's
+# --no-preserve=mode silently ships it non-executable. Missing exactly this
+# for cyberos-systemhealth-state and cyberos-toggle-touchscreen shipped both
+# features unusable on a real ISO -- git's own mode bit isn't enough, and
+# per-script tests only catch what someone remembers to write one for.
+@test "every 755-tracked usr/local/bin script has a profiledef.sh file_permissions entry" {
+  while IFS=$'\t' read -r mode path; do
+    [ "$mode" = "100755" ] || continue
+    name=$(basename "$path")
+    run grep -q "\"/usr/local/bin/$name\"\]=\"0:0:755\"" "$ROOT/profile/profiledef.sh"
+    [ "$status" -eq 0 ] || { echo "profiledef.sh is missing: [\"/usr/local/bin/$name\"]=\"0:0:755\""; false; }
+  done < <(git -C "$ROOT" ls-files -s profile/airootfs/usr/local/bin | awk '{print $1"\t"$4}')
+}
+
 # --- Battery chip opens power profiles, not the shutdown menu (2026-09-01)
 # The bar already has a dedicated power button for sleep/lock/restart/shutdown;
 # the battery chip was opening the same menu instead of showing what a battery

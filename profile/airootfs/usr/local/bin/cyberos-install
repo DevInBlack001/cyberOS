@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  cyberos-install — copy the running CyberOS live system to a disk.
+#  cyberos-install: copy the running CyberOS live system to a disk.
 #
 #  The installed machine ends up IDENTICAL to the live ISO (same packages,
 #  same theme), minus the live-only bits (autologin, archiso initramfs hooks).
@@ -312,7 +312,7 @@ render_banner() {
        |___/                             
 BANNER
   printf "${C_RESET}"
-  printf "${C_CYAN}  CyberOS Interactive Installer${C_RESET} ${C_DIM}— Arch Linux with Hyprland & Quickshell${C_RESET}\n"
+  printf "${C_CYAN}  CyberOS Interactive Installer${C_RESET} ${C_DIM}(Arch Linux with Hyprland & Quickshell)${C_RESET}\n"
   printf "${C_GRAY}  ────────────────────────────────────────────────────────────────────────${C_RESET}\n\n"
 }
 
@@ -631,7 +631,7 @@ if [[ $DRY_RUN -eq 0 ]]; then
   if [[ $MODE == manual ]]; then
     [[ -b ${ROOTP:-/nonexistent} ]] || die "--root <partition> is required for manual mode"
     [[ $UEFI -eq 0 || -b ${EFIP:-/nonexistent} ]] || die "--efi <partition> is required on UEFI systems"
-    for p_ in $ROOTP $EFIP $HOMEP; do grep -q "^$p_ " /proc/mounts && die "$p_ is mounted — unmount it first"; done
+    for p_ in $ROOTP $EFIP $HOMEP; do grep -q "^$p_ " /proc/mounts && die "$p_ is mounted -- unmount it first"; done
     [[ $ROOTP != "$EFIP" && $ROOTP != "$HOMEP" ]] || die "root/efi/home must be different partitions"
   else
     disk_has_mount "$DISK" && die "$DISK is mounted -- unmount it first"
@@ -745,7 +745,7 @@ printf '127.0.0.1 localhost\n::1 localhost\n127.0.1.1 %s\n' "$HOSTNAME_" > /mnt/
 rm -f /mnt/etc/resolv.conf; touch /mnt/etc/resolv.conf
 printf 'CyberOS \\r (\\l)\n\n' > /mnt/etc/issue
 cat > /mnt/etc/motd <<'MOTD'
-  CyberOS — Cyber Department. Type `fastfetch` for system info.
+  CyberOS, Cyber Department. Type `fastfetch` for system info.
 MOTD
 
 cat > /mnt/etc/mkinitcpio.d/linux.preset <<'PRESET'
