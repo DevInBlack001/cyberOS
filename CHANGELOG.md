@@ -78,6 +78,13 @@ own build metadata — not SemVer.
 
 ### Added
 
+- Power menu: Sleep (`systemctl suspend`) always offered; Hibernate
+  (`systemctl hibernate`) offered only when live `/proc/meminfo` shows
+  swap at least as large as RAM, checked at every open rather than
+  assumed from how the installer originally sized swap, since a
+  swapfile/zram can change size long after install. A too-small swap
+  simply hides the Hibernate row instead of offering an action that
+  would fail or corrupt state mid-hibernate.
 - `aether` (`aur/packages.txt`, github.com/bjarneo/aether): a native theming
   tool so a student can change their own colour scheme at any time, not just
   toggle CyberOS's own light/dark palette. Built-in presets (Dracula, Nord,

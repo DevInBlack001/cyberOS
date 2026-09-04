@@ -75,16 +75,30 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
     | tr -d ' \t\n' | grep -q 'Tray{}BluetoothChip{}'
 }
 
-@test "power menu replaces the rofi script with the same four actions" {
+@test "power menu replaces the rofi script, plus sleep/hibernate" {
   [ ! -e "$ROOT/profile/airootfs/etc/skel/.config/rofi/powermenu.sh" ]
   # run-wrapped: a mid-body "!" is exempt from errexit and would be silently
   # swallowed by the loop/grep that follows.
   run grep -q 'powermenu.sh' "$ROOT/profile/profiledef.sh"
   [ "$status" -ne 0 ]
-  for a in hyprlock 'hl.dsp.exit' 'systemctl.*reboot' 'systemctl.*poweroff'; do
+  for a in hyprlock 'systemctl.*suspend' 'hl.dsp.exit' 'systemctl.*reboot' 'systemctl.*poweroff'; do
     grep -qE "$a" "$QS/power/PowerMenu.qml"
   done
   grep -q '"power"' "$QS/shell.qml"   # ipc target
+}
+
+@test "hibernate is offered only when swap can actually hold RAM, checked live not assumed" {
+  f="$QS/power/PowerMenu.qml"
+  grep -q '/proc/meminfo' "$f"
+  grep -q 'MemTotal' "$f"
+  grep -q 'SwapTotal' "$f"
+  # Gate is swap >= mem, not just "swap exists" -- a small swapfile/zram
+  # would silently fail or corrupt state mid-hibernate otherwise.
+  grep -q 'hibernateOk: root.swapKb > 0 && root.swapKb >= root.memKb' "$f"
+  grep -qE 'systemctl.*hibernate' "$f"
+  grep -q 'root.hibernateOk' "$f"
+  implicit=$(grep -c 'implicitHeight: 20 + root.actions.length \* 50' "$f")
+  [ "$implicit" -eq 1 ]   # row count drives panel height, not a fixed constant
 }
 
 @test "osd handles the five ipc functions and swayosd is gone" {

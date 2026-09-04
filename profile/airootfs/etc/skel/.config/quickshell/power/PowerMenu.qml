@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Io
 import ".." as Cyber
 
 // Replaces the deleted rofi/powermenu.sh. Opened/closed via
@@ -19,17 +20,53 @@ PanelWindow {
 
     anchors { left: false; right: false; top: false; bottom: false }
     implicitWidth: 260
-    implicitHeight: 220
+    implicitHeight: 20 + root.actions.length * 50
     color: "transparent"
     focusable: true
     aboveWindows: true
 
-    readonly property var actions: [
-        { icon: "\uf023", label: "Lock",      run: () => Quickshell.execDetached(["hyprlock"]) },
-        { icon: "\uf2f5", label: "Log out",   run: () => Hyprland.dispatch("hl.dsp.exit()") },
-        { icon: "\uf2f9", label: "Reboot",    run: () => Quickshell.execDetached(["systemctl", "reboot"]) },
-        { icon: "\uf011", label: "Shut down", run: () => Quickshell.execDetached(["systemctl", "poweroff"]) }
-    ]
+    // Hibernate writes the whole of RAM out to swap, so it is only offered
+    // when swap can actually hold that: read live from /proc/meminfo rather
+    // than trusting the installer's own partitioning choice, since a swap
+    // file/zram can be resized long after install and this project has no
+    // other place that re-checks it. No FileView.text() binding (same
+    // reason popups/EmojiPicker.qml doesn't): parsed imperatively in
+    // onTextChanged into plain properties instead.
+    property int memKb: 0
+    property int swapKb: 0
+    readonly property bool hibernateOk: root.swapKb > 0 && root.swapKb >= root.memKb
+
+    FileView {
+        id: meminfoFile
+        path: "/proc/meminfo"
+        onTextChanged: {
+            const t = text();
+            const mem = t.match(/^MemTotal:\s+(\d+) kB/m);
+            const swap = t.match(/^SwapTotal:\s+(\d+) kB/m);
+            root.memKb = mem ? parseInt(mem[1], 10) : 0;
+            root.swapKb = swap ? parseInt(swap[1], 10) : 0;
+        }
+    }
+
+    // Hibernate is spliced in only when hibernateOk, right after Sleep, so
+    // the list length (and implicitHeight above) both react to it appearing
+    // or disappearing rather than reserving a row that silently does nothing.
+    function buildActions() {
+        const list = [
+            { icon: "\uf023", label: "Lock",      run: () => Quickshell.execDetached(["hyprlock"]) },
+            { icon: "\uf186", label: "Sleep",     run: () => Quickshell.execDetached(["systemctl", "suspend"]) }
+        ];
+        if (root.hibernateOk) {
+            list.push({ icon: "\uf236", label: "Hibernate", run: () => Quickshell.execDetached(["systemctl", "hibernate"]) });
+        }
+        list.push(
+            { icon: "\uf2f5", label: "Log out",   run: () => Hyprland.dispatch("hl.dsp.exit()") },
+            { icon: "\uf2f9", label: "Reboot",    run: () => Quickshell.execDetached(["systemctl", "reboot"]) },
+            { icon: "\uf011", label: "Shut down", run: () => Quickshell.execDetached(["systemctl", "poweroff"]) }
+        );
+        return list;
+    }
+    readonly property var actions: root.buildActions()
     property int selected: 0
 
     function activate(idx) {
