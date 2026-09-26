@@ -43,8 +43,8 @@ pcall(dofile, cfgdir .. "/monitors.lua")
 ---------------------------------------------------------------- programs
 local terminal = "foot"
 local browser  = "firefox"
--- dolphin is gone; Files is a Quickshell surface in the running shell.
-local files    = "cyberos-files" -- wrapper: always passes an explicit arg, empty here
+-- dolphin is gone; Files is fim, a TUI opened in a floating foot window.
+local files    = "cyberos-fim" -- wrapper: always passes an explicit arg, defaults to $HOME
 local editor   = "code"
 
 ---------------------------------------------------------------- autostart
@@ -196,6 +196,7 @@ hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"),   { locked = tru
 ---------------------------------------------------------------- window rules
 hl.window_rule({ name = "float-installer", match = { class = "^(cyberos-installer)$" }, float = true, size = { 920, 640 }, center = true })
 hl.window_rule({ name = "float-cloud-drives", match = { class = "^(cyberos-cloud-drives)$" }, float = true, size = { 720, 420 }, center = true })
+hl.window_rule({ name = "float-fim", match = { class = "^(cyberos-fim)$" }, float = true, size = { 1000, 640 }, center = true })
 hl.window_rule({ name = "float-pip",  match = { title = "^(Picture-in-Picture)$" }, float = true })
 hl.window_rule({ name = "float-vbox", match = { class = "^(VirtualBox Machine)$" }, float = true })
 hl.window_rule({ name = "suppress-maximize", match = { class = ".*" }, suppress_event = "maximize" })

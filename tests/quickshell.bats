@@ -388,3 +388,26 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   grep -q 'Categories=Security;' "$d"
   grep -q 'Exec=foot' "$d"
 }
+
+@test "fim is the only registered file manager" {
+  [ ! -f "$QS/apps/Files.qml" ]
+  [ ! -f "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-files" ]
+  [ -x "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-fim" ]
+  [ -f "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/share/applications/cyberos-fim.desktop" ]
+  grep -q "inode/directory" "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/share/applications/cyberos-fim.desktop"
+}
+
+@test "no other file manager package is shipped" {
+  PKGS="$BATS_TEST_DIRNAME/../profile/packages.x86_64"
+  AURPKGS="$BATS_TEST_DIRNAME/../aur/packages.txt"
+  for p in nautilus thunar pcmanfm nnn ranger; do
+    run bash -c "sed 's/#.*//' '$PKGS' | tr -d ' ' | grep -v '^\$' | grep -qx '$p'"
+    [ "$status" -ne 0 ]
+    run grep -qx "$p" "$AURPKGS"
+    [ "$status" -ne 0 ]
+  done
+}
+
+@test "cyberos-fim sets a title cloud-drives' window matching expects" {
+  grep -q -- '--title' "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-fim"
+}

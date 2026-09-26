@@ -86,10 +86,6 @@ ShellRoot {
         id: images
         Apps.Images {}
     }
-    LazyLoader {
-        id: files
-        Apps.Files {}
-    }
     LazyLoader { id: osd; Osd.Osd {} }
 
     // Replaces mako. actionsSupported/imageSupported/bodySupported tell the
@@ -272,21 +268,9 @@ ShellRoot {
         }
     }
 
-    // `qs ipc call files open <path>` -- Super+E and cyberos-files.desktop
-    // both land here. An empty path means "open at $HOME", which is the
-    // component's own default, so it is left alone in that case.
-    // `active`, not `activeAsync` -- see the images handler above: the item
-    // must exist by the time we assign to it.
-    IpcHandler {
-        target: "files"
-        function open(path: string): void {
-            files.active = true;
-            if (files.item) {
-                if (path !== "") files.item.path = path;
-                files.item.visible = true;
-            }
-        }
-    }
+    // Files is fim now (a TUI, opened by cyberos-fim in a floating foot
+    // window via Super+E / cyberos-fim.desktop), not a Quickshell surface,
+    // so there is no IPC target for it here.
 
     // `qs ipc call systemhealth toggle` -- bar/SystemHealthChip.qml's own
     // click handler. `systemhealth` is always `active` (see the LazyLoader
