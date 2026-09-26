@@ -52,3 +52,12 @@ pkg_listed() {
 @test "fim is registered for local build" {
   grep -qx "fim" "$BATS_TEST_DIRNAME/../aur/packages.txt"
 }
+
+@test "filetransferd is enabled as a default user unit" {
+  [ -L "$BATS_TEST_DIRNAME/../profile/airootfs/etc/systemd/user/default.target.wants/filetransferd.service" ]
+}
+
+@test "ftctl and filetransferd binaries are vendored" {
+  [ -x "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/filetransferd" ]
+  [ -x "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/ftctl" ]
+}
