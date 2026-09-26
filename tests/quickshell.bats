@@ -411,3 +411,15 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
 @test "cyberos-fim sets a title cloud-drives' window matching expects" {
   grep -q -- '--title' "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/cyberos-fim"
 }
+
+@test "transfer bar chip is vendored and registered by default" {
+  [ -f "$QS/bar/TransferChip.qml" ]
+  [ -f "$QS/popups/Transfer.qml" ]
+  grep -q "TransferChip" "$QS/bar/Bar.qml"
+  grep -q 'target: "transfer"' "$QS/shell.qml"
+}
+
+@test "transfer chip renders job names as plain text and calls ftctl" {
+  grep -q "Text.PlainText" "$QS/popups/Transfer.qml"
+  grep -q '"ftctl"' "$QS/popups/Transfer.qml"
+}

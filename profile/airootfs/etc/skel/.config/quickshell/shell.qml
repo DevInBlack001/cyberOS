@@ -161,6 +161,15 @@ ShellRoot {
         Popups.CloudDrives {}
     }
 
+    // Always active for the same reason as cloudDrives above:
+    // bar/TransferChip.qml needs live active-count/error state to colour
+    // itself even while the panel is closed.
+    LazyLoader {
+        id: transfer
+        active: true
+        Popups.Transfer {}
+    }
+
     // `qs ipc call notify dnd` -- replaces mako's own notification pipeline;
     // toggles do-not-disturb (see bar/NotifyChip.qml for the bar-side toggle).
     IpcHandler {
@@ -309,6 +318,15 @@ ShellRoot {
         function open(): void { cloudDrives.item?.open(); }
         function close(): void { cloudDrives.item?.close(); }
         function toggle(): void { cloudDrives.item?.toggle(); }
+    }
+
+    // `qs ipc call transfer toggle` -- bar/TransferChip.qml's own click
+    // handler, same shape as clouddrives above.
+    IpcHandler {
+        target: "transfer"
+        function open(): void { transfer.item?.open(); }
+        function close(): void { transfer.item?.close(); }
+        function toggle(): void { transfer.item?.toggle(); }
     }
 
     // Keeps Pipewire's default-sink properties valid/subscribed for the OSD
