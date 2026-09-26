@@ -40,3 +40,15 @@ pkg_listed() {
     pkg_listed "$p"
   done
 }
+
+@test "fim is listed as a package" {
+  pkg_listed "fim"
+}
+
+@test "fim has a local PKGBUILD" {
+  [ -f "$BATS_TEST_DIRNAME/../aur/fim/PKGBUILD" ]
+}
+
+@test "fim is registered for local build" {
+  grep -qx "fim" "$BATS_TEST_DIRNAME/../aur/packages.txt"
+}
