@@ -196,7 +196,6 @@ hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"),   { locked = tru
 ---------------------------------------------------------------- window rules
 hl.window_rule({ name = "float-installer", match = { class = "^(cyberos-installer)$" }, float = true, size = { 920, 640 }, center = true })
 hl.window_rule({ name = "float-cloud-drives", match = { class = "^(cyberos-cloud-drives)$" }, float = true, size = { 720, 420 }, center = true })
-hl.window_rule({ name = "float-fim", match = { class = "^(cyberos-fim)$" }, float = true, size = { 1000, 640 }, center = true })
 hl.window_rule({ name = "float-pip",  match = { title = "^(Picture-in-Picture)$" }, float = true })
 hl.window_rule({ name = "float-vbox", match = { class = "^(VirtualBox Machine)$" }, float = true })
 hl.window_rule({ name = "suppress-maximize", match = { class = ".*" }, suppress_event = "maximize" })

@@ -423,3 +423,16 @@ QMLLINT=/usr/lib/qt6/bin/qmllint
   grep -q "Text.PlainText" "$QS/popups/Transfer.qml"
   grep -q '"ftctl"' "$QS/popups/Transfer.qml"
 }
+
+@test "the fim package's own launcher entry is masked -- cyberos-fim is the one shown" {
+  d="$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/share/applications/fim.desktop"
+  [ -f "$d" ]
+  grep -qx "NoDisplay=true" "$d"
+}
+
+@test "cyberos-fim opens tiled, not floating" {
+  run grep -q "float-fim" "$BATS_TEST_DIRNAME/../profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
+  [ "$status" -ne 0 ]
+  # the Super+E bind itself must still exist and still target cyberos-fim
+  grep -q 'local files.*cyberos-fim' "$BATS_TEST_DIRNAME/../profile/airootfs/etc/skel/.config/hypr/hyprland.lua"
+}
