@@ -61,3 +61,9 @@ pkg_listed() {
   [ -x "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/filetransferd" ]
   [ -x "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/ftctl" ]
 }
+
+@test "ft_common is vendored -- ftctl/filetransferd both import it" {
+  [ -f "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/ft_common.py" ]
+  grep -q "import ft_common" "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/ftctl"
+  grep -q "import ft_common" "$BATS_TEST_DIRNAME/../profile/airootfs/usr/local/bin/filetransferd"
+}

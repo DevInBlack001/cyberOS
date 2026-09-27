@@ -41,4 +41,5 @@ file_permissions=(
   ["/usr/local/bin/cyberos-cloud-drives"]="0:0:755"
   ["/usr/local/bin/filetransferd"]="0:0:755"
   ["/usr/local/bin/ftctl"]="0:0:755"
+  ["/usr/local/bin/ft_common.py"]="0:0:755"
 )
